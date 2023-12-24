@@ -47,7 +47,7 @@ func Update(s storage.MetricsStorage) http.HandlerFunc {
 		case counter:
 			cval, err := strconv.ParseInt(metricValue, 10, 64)
 			if err != nil {
-				http.Error(w, "failed to parse int64 from value", http.StatusInternalServerError)
+				http.Error(w, "invalid value type", http.StatusBadRequest)
 				return
 			}
 			_, err = s.UpdateCounter(metricName, cval)
@@ -56,9 +56,9 @@ func Update(s storage.MetricsStorage) http.HandlerFunc {
 				return
 			}
 		case gauge:
-			gval, err := strconv.ParseFloat(metricValue, 10)
+			gval, err := strconv.ParseFloat(metricValue, 64)
 			if err != nil {
-				http.Error(w, "failed to parse float64 from value", http.StatusInternalServerError)
+				http.Error(w, "invalid value type", http.StatusBadRequest)
 				return
 			}
 			_, err = s.UpdateGauge(metricName, gval)

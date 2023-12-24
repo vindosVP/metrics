@@ -1,4 +1,4 @@
-package memStorage
+package memstorage
 
 import "github.com/vindosVP/metrics/internal/repos"
 
@@ -7,7 +7,7 @@ type Storage struct {
 	cRepo *repos.CounterRepo
 }
 
-func NewStorage(gRepo *repos.GaugeRepo, cRepo *repos.CounterRepo) *Storage {
+func New(gRepo *repos.GaugeRepo, cRepo *repos.CounterRepo) *Storage {
 	return &Storage{
 		gRepo: gRepo,
 		cRepo: cRepo,
