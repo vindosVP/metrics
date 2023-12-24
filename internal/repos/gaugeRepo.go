@@ -9,17 +9,8 @@ func NewGaugeRepo() *GaugeRepo {
 }
 
 func (g GaugeRepo) Update(name string, v float64) (float64, error) {
-	currentV, ok := g.metrics[name]
-
-	var newV float64
-	if ok {
-		newV = currentV + v
-	} else {
-		newV = v
-	}
-	g.metrics[name] = newV
-
-	return newV, nil
+	g.metrics[name] = v
+	return v, nil
 }
 
 func (g GaugeRepo) Get(name string) (float64, error) {
