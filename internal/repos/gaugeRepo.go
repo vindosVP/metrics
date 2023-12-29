@@ -1,5 +1,11 @@
 package repos
 
+//go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=Gauge
+type Gauge interface {
+	Update(name string, v float64) (float64, error)
+	Get(name string) (float64, error)
+}
+
 type GaugeRepo struct {
 	metrics map[string]float64
 }

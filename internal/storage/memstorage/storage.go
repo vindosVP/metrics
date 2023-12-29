@@ -3,11 +3,11 @@ package memstorage
 import "github.com/vindosVP/metrics/internal/repos"
 
 type Storage struct {
-	gRepo *repos.GaugeRepo
-	cRepo *repos.CounterRepo
+	gRepo repos.Gauge
+	cRepo repos.Counter
 }
 
-func New(gRepo *repos.GaugeRepo, cRepo *repos.CounterRepo) *Storage {
+func New(gRepo repos.Gauge, cRepo repos.Counter) *Storage {
 	return &Storage{
 		gRepo: gRepo,
 		cRepo: cRepo,
