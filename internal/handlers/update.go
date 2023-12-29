@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/vindosVP/metrics/internal/storage"
 	"log"
@@ -57,7 +56,7 @@ func Update(s storage.MetricsStorage) http.HandlerFunc {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			log.Print(fmt.Sprintf("Updated value of %s with %v", metricName, cval))
+			log.Printf("Updated value of %s with %v", metricName, cval)
 		case gauge:
 			gval, err := strconv.ParseFloat(metricValue, 64)
 			if err != nil {
@@ -69,7 +68,7 @@ func Update(s storage.MetricsStorage) http.HandlerFunc {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			log.Print(fmt.Sprintf("Updated value of %s with %v", metricName, gval))
+			log.Printf("Updated value of %s with %v", metricName, gval)
 		}
 
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")

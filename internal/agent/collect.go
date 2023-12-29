@@ -9,7 +9,7 @@ import (
 )
 
 func collect(s *storage, wg *sync.WaitGroup) {
-	for true {
+	for {
 		s.mu.Lock()
 
 		metrics := &runtime.MemStats{}
@@ -21,7 +21,6 @@ func collect(s *storage, wg *sync.WaitGroup) {
 
 		time.Sleep(pollInterval * time.Second)
 	}
-	wg.Done()
 }
 
 func save(s *storage, metrics *runtime.MemStats) {

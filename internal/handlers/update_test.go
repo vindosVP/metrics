@@ -96,6 +96,7 @@ func TestUpdate(t *testing.T) {
 
 			assert.Equal(t, tt.want.code, res.StatusCode)
 			assert.Equal(t, tt.want.contentType, res.Header.Get("Content-Type"))
+			defer res.Body.Close()
 		})
 	}
 
