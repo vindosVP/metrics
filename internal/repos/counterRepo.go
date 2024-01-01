@@ -4,6 +4,7 @@ package repos
 type Counter interface {
 	Update(name string, v int64) (int64, error)
 	Get(name string) (int64, error)
+	GetAll() (map[string]int64, error)
 }
 
 type CounterRepo struct {
@@ -36,4 +37,8 @@ func (c CounterRepo) Get(name string) (int64, error) {
 	}
 
 	return v, nil
+}
+
+func (c CounterRepo) GetAll() (map[string]int64, error) {
+	return c.metrics, nil
 }

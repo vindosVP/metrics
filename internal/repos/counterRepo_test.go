@@ -2,6 +2,7 @@ package repos
 
 import (
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -107,6 +108,41 @@ func TestCounterRepo_Get(t *testing.T) {
 			} else {
 				assert.Equal(t, tt.wantValue, val)
 			}
+		})
+	}
+}
+
+func TestCounterRepo_GetAll(t *testing.T) {
+	tests := []struct {
+		name    string
+		metrics map[string]int64
+		want    map[string]int64
+	}{
+		{
+			name:    "empty",
+			metrics: make(map[string]int64),
+			want:    make(map[string]int64),
+		},
+		{
+			name: "filled",
+			metrics: map[string]int64{
+				"PollCount": 1,
+				"Test":      2,
+			},
+			want: map[string]int64{
+				"PollCount": 1,
+				"Test":      2,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := CounterRepo{
+				metrics: tt.metrics,
+			}
+			got, err := c.GetAll()
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

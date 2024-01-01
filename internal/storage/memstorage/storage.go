@@ -29,3 +29,11 @@ func (s Storage) GetGauge(name string) (float64, error) {
 func (s Storage) GetCounter(name string) (int64, error) {
 	return s.cRepo.Get(name)
 }
+
+func (s Storage) GetAllGauge() (map[string]float64, error) {
+	return s.gRepo.GetAll()
+}
+
+func (s Storage) GetAllCounter() (map[string]int64, error) {
+	return s.cRepo.GetAll()
+}

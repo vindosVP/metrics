@@ -202,3 +202,115 @@ func TestStorage_GetCounter(t *testing.T) {
 	}
 
 }
+
+func TestStorage_GetAllGauge(t *testing.T) {
+	unexpectedError := errors.New("unexpected error")
+	tests := []struct {
+		name        string
+		mockMetrics map[string]float64
+		wantMetrics map[string]float64
+		wantErr     bool
+		errValue    error
+	}{
+		{
+			name:        "empty",
+			mockMetrics: make(map[string]float64),
+			wantMetrics: make(map[string]float64),
+			wantErr:     false,
+			errValue:    nil,
+		},
+		{
+			name: "filled",
+			mockMetrics: map[string]float64{
+				"Alloc": 12.2,
+				"Test":  33,
+			},
+			wantMetrics: map[string]float64{
+				"Alloc": 12.2,
+				"Test":  33,
+			},
+			wantErr:  false,
+			errValue: nil,
+		},
+		{
+			name:        "unexpected error",
+			mockMetrics: nil,
+			wantMetrics: nil,
+			wantErr:     true,
+			errValue:    unexpectedError,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockCounter := mocks.NewCounter(t)
+			mockGauge := mocks.NewGauge(t)
+			storage := New(mockGauge, mockCounter)
+			mockGauge.On("GetAll").Return(tt.mockMetrics, tt.errValue)
+
+			got, err := storage.GetAllGauge()
+			if tt.wantErr {
+				assert.ErrorIs(t, err, tt.errValue)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.wantMetrics, got)
+			}
+		})
+	}
+}
+
+func TestStorage_GetAllCounter(t *testing.T) {
+	unexpectedError := errors.New("unexpected error")
+	tests := []struct {
+		name        string
+		mockMetrics map[string]int64
+		wantMetrics map[string]int64
+		wantErr     bool
+		errValue    error
+	}{
+		{
+			name:        "empty",
+			mockMetrics: make(map[string]int64),
+			wantMetrics: make(map[string]int64),
+			wantErr:     false,
+			errValue:    nil,
+		},
+		{
+			name: "filled",
+			mockMetrics: map[string]int64{
+				"PollCount": 35,
+				"Test":      33,
+			},
+			wantMetrics: map[string]int64{
+				"PollCount": 35,
+				"Test":      33,
+			},
+			wantErr:  false,
+			errValue: nil,
+		},
+		{
+			name:        "unexpected error",
+			mockMetrics: nil,
+			wantMetrics: nil,
+			wantErr:     true,
+			errValue:    unexpectedError,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockCounter := mocks.NewCounter(t)
+			mockGauge := mocks.NewGauge(t)
+			storage := New(mockGauge, mockCounter)
+			mockCounter.On("GetAll").Return(tt.mockMetrics, tt.errValue)
+
+			got, err := storage.GetAllCounter()
+			if tt.wantErr {
+				assert.ErrorIs(t, err, tt.errValue)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.wantMetrics, got)
+			}
+		})
+	}
+}

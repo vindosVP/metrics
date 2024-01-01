@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/vindosVP/metrics/internal/repos"
 	"github.com/vindosVP/metrics/internal/storage/memstorage"
@@ -47,7 +47,7 @@ func TestUpdate(t *testing.T) {
 			method: http.MethodGet,
 			want: want{
 				code:        http.StatusMethodNotAllowed,
-				contentType: "text/plain; charset=utf-8",
+				contentType: "",
 			},
 		},
 		{
@@ -86,8 +86,8 @@ func TestUpdate(t *testing.T) {
 			gRepo := repos.NewGaugeRepo()
 			storage := memstorage.New(gRepo, cRepo)
 
-			r := mux.NewRouter()
-			r.HandleFunc("/update/{type}/{name}/{value}", Update(storage))
+			r := chi.NewRouter()
+			r.Post("/update/{type}/{name}/{value}", Update(storage))
 
 			req := httptest.NewRequest(tt.method, tt.url, nil)
 			w := httptest.NewRecorder()

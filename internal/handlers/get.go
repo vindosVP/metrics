@@ -2,18 +2,13 @@ package handlers
 
 import (
 	"github.com/go-chi/chi/v5"
+	"github.com/vindosVP/metrics/internal/repos"
 	"github.com/vindosVP/metrics/internal/storage"
-	"log"
 	"net/http"
 	"strconv"
 )
 
-const (
-	counter = "counter"
-	gauge   = "gauge"
-)
-
-func Update(s storage.MetricsStorage) http.HandlerFunc {
+func Get(s storage.MetricsStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 
 		metricType := chi.URLParam(req, "type")
@@ -33,37 +28,41 @@ func Update(s storage.MetricsStorage) http.HandlerFunc {
 			return
 		}
 
-		metricValue := chi.URLParam(req, "value")
-		if metricValue == "" {
-			http.Error(w, "value is missing in parameters", http.StatusBadRequest)
-			return
-		}
-
 		switch metricType {
 		case counter:
-			cval, err := strconv.ParseInt(metricValue, 10, 64)
+			cvalue, err := s.GetCounter(metricName)
 			if err != nil {
-				http.Error(w, "invalid value type", http.StatusBadRequest)
+				var status int
+				if err == repos.ErrMetricNotRegistered {
+					status = http.StatusNotFound
+				} else {
+					status = http.StatusInternalServerError
+				}
+				http.Error(w, err.Error(), status)
 				return
 			}
-			_, err = s.UpdateCounter(metricName, cval)
+			_, err = w.Write([]byte(strconv.FormatInt(cvalue, 10)))
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			log.Printf("Updated value of %s with %v", metricName, cval)
 		case gauge:
-			gval, err := strconv.ParseFloat(metricValue, 64)
+			gvalue, err := s.GetGauge(metricName)
 			if err != nil {
-				http.Error(w, "invalid value type", http.StatusBadRequest)
+				var status int
+				if err == repos.ErrMetricNotRegistered {
+					status = http.StatusNotFound
+				} else {
+					status = http.StatusInternalServerError
+				}
+				http.Error(w, err.Error(), status)
 				return
 			}
-			_, err = s.UpdateGauge(metricName, gval)
+			_, err = w.Write([]byte(strconv.FormatFloat(gvalue, 'f', -1, 64)))
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			log.Printf("Updated value of %s with %v", metricName, gval)
 		}
 
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")

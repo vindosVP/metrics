@@ -33,6 +33,32 @@ func (_m *Counter) Get(name string) (int64, error) {
 	return r0, r1
 }
 
+// GetAll provides a mock function with given fields:
+func (_m *Counter) GetAll() (map[string]int64, error) {
+	ret := _m.Called()
+
+	var r0 map[string]int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func() (map[string]int64, error)); ok {
+		return rf()
+	}
+	if rf, ok := ret.Get(0).(func() map[string]int64); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string]int64)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Update provides a mock function with given fields: name, v
 func (_m *Counter) Update(name string, v int64) (int64, error) {
 	ret := _m.Called(name, v)

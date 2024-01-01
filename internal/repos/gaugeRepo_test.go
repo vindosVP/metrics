@@ -2,6 +2,7 @@ package repos
 
 import (
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -98,6 +99,41 @@ func TestGaugeRepo_Get(t *testing.T) {
 			} else {
 				assert.Equal(t, tt.wantValue, val)
 			}
+		})
+	}
+}
+
+func TestGaugeRepo_GetAll(t *testing.T) {
+	tests := []struct {
+		name    string
+		metrics map[string]float64
+		want    map[string]float64
+	}{
+		{
+			name:    "empty",
+			metrics: make(map[string]float64),
+			want:    make(map[string]float64),
+		},
+		{
+			name: "filled",
+			metrics: map[string]float64{
+				"Test":  2.2222222,
+				"Test2": 0.000000000000000003,
+			},
+			want: map[string]float64{
+				"Test":  2.2222222,
+				"Test2": 0.000000000000000003,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := GaugeRepo{
+				metrics: tt.metrics,
+			}
+			got, err := g.GetAll()
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

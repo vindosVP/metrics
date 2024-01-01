@@ -4,6 +4,7 @@ package repos
 type Gauge interface {
 	Update(name string, v float64) (float64, error)
 	Get(name string) (float64, error)
+	GetAll() (map[string]float64, error)
 }
 
 type GaugeRepo struct {
@@ -26,4 +27,8 @@ func (g GaugeRepo) Get(name string) (float64, error) {
 	}
 
 	return v, nil
+}
+
+func (g GaugeRepo) GetAll() (map[string]float64, error) {
+	return g.metrics, nil
 }
