@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func collect(s *storage, wg *sync.WaitGroup) {
+func collect(s *storage, cfg *Config, wg *sync.WaitGroup) {
 	for {
 		s.mu.Lock()
 
@@ -19,7 +19,7 @@ func collect(s *storage, wg *sync.WaitGroup) {
 
 		s.mu.Unlock()
 
-		time.Sleep(pollInterval * time.Second)
+		time.Sleep(cfg.PollInterval * time.Second)
 	}
 }
 

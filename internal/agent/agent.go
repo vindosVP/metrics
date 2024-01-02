@@ -5,16 +5,9 @@ import (
 )
 
 const (
-	pollInterval   = 2
-	reportInterval = 10
-)
-
-const (
 	gauge   = metricType("gauge")
 	counter = metricType("counter")
 )
-
-const serverHost = "localhost:8080"
 
 type metricType string
 
@@ -26,6 +19,8 @@ type storage struct {
 
 func Run() error {
 
+	cfg := NewConfig()
+
 	s := &storage{
 		gaugeMetrics:   make(map[string]float64),
 		counterMetrics: make(map[string]int64),
@@ -35,8 +30,8 @@ func Run() error {
 	var wg sync.WaitGroup
 
 	wg.Add(2)
-	go collect(s, &wg)
-	go send(s, &wg)
+	go collect(s, cfg, &wg)
+	go send(s, cfg, &wg)
 	wg.Wait()
 
 	return nil
