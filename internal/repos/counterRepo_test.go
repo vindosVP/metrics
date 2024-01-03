@@ -73,6 +73,73 @@ func TestCounterRepo_Update(t *testing.T) {
 
 }
 
+func TestCounterRepo_Set(t *testing.T) {
+	tests := []struct {
+		name            string
+		existingMetrics map[string]int64
+		metricName      string
+		metricValue     int64
+		wantValue       int64
+		wantErr         bool
+		errValue        error
+	}{
+		{
+			name:            "empty metrics",
+			existingMetrics: make(map[string]int64),
+			metricName:      "PollCount",
+			metricValue:     123,
+			wantValue:       123,
+			wantErr:         false},
+		{
+			name: "existing metric",
+			existingMetrics: map[string]int64{
+				"PollCount": 1,
+			},
+			metricName:  "PollCount",
+			metricValue: 123,
+			wantValue:   123,
+			wantErr:     false},
+		{
+			name: "existing negative metric",
+			existingMetrics: map[string]int64{
+				"PollCount": -5,
+			},
+			metricName:  "PollCount",
+			metricValue: 123,
+			wantValue:   123,
+			wantErr:     false},
+		{
+			name:            "zero value",
+			existingMetrics: make(map[string]int64),
+			metricName:      "PollCount",
+			metricValue:     0,
+			wantValue:       0,
+			wantErr:         false},
+		{
+			name:            "negative value",
+			existingMetrics: make(map[string]int64),
+			metricName:      "PollCount",
+			metricValue:     -22,
+			wantValue:       -22,
+			wantErr:         false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := &CounterRepo{metrics: tt.existingMetrics}
+			val, err := repo.Set(tt.metricName, tt.metricValue)
+			if tt.wantErr {
+				assert.ErrorIs(t, err, tt.errValue)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.wantValue, val)
+				assert.Equal(t, repo.metrics[tt.metricName], tt.wantValue)
+			}
+		})
+	}
+
+}
+
 func TestCounterRepo_Get(t *testing.T) {
 	tests := []struct {
 		name            string

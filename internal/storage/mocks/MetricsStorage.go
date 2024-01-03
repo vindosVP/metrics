@@ -109,6 +109,30 @@ func (_m *MetricsStorage) GetGauge(name string) (float64, error) {
 	return r0, r1
 }
 
+// SetCounter provides a mock function with given fields: name, v
+func (_m *MetricsStorage) SetCounter(name string, v int64) (int64, error) {
+	ret := _m.Called(name, v)
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string, int64) (int64, error)); ok {
+		return rf(name, v)
+	}
+	if rf, ok := ret.Get(0).(func(string, int64) int64); ok {
+		r0 = rf(name, v)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(string, int64) error); ok {
+		r1 = rf(name, v)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // UpdateCounter provides a mock function with given fields: name, v
 func (_m *MetricsStorage) UpdateCounter(name string, v int64) (int64, error) {
 	ret := _m.Called(name, v)

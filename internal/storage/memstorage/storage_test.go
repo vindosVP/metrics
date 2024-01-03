@@ -57,6 +57,56 @@ func TestStorage_UpdateCounter(t *testing.T) {
 
 }
 
+func TestStorage_SetCounter(t *testing.T) {
+	unexpectedError := errors.New("unexpected error")
+	tests := []struct {
+		name        string
+		mockValue   int64
+		mockErr     error
+		metricName  string
+		metricValue int64
+		wantValue   int64
+		wantErr     bool
+		errValue    error
+	}{
+		{
+			name:        "ok",
+			mockValue:   12,
+			mockErr:     nil,
+			metricName:  "PollCount",
+			metricValue: 12,
+			wantValue:   12,
+			wantErr:     false,
+			errValue:    nil},
+		{
+			name:        "error",
+			mockValue:   12,
+			mockErr:     unexpectedError,
+			metricName:  "PollCount",
+			metricValue: 12,
+			wantErr:     true,
+			errValue:    unexpectedError},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockCounter := mocks.NewCounter(t)
+			mockGauge := mocks.NewGauge(t)
+			storage := New(mockGauge, mockCounter)
+			mockCounter.On("Set", tt.metricName, tt.metricValue).Return(tt.mockValue, tt.mockErr)
+			val, err := storage.SetCounter(tt.metricName, tt.metricValue)
+
+			if tt.wantErr {
+				assert.ErrorIs(t, err, tt.errValue)
+			} else {
+				assert.Equal(t, tt.wantValue, val)
+				assert.NoError(t, err, tt.wantErr)
+			}
+		})
+	}
+
+}
+
 func TestStorage_UpdateGauge(t *testing.T) {
 	unexpectedError := errors.New("unexpected error")
 	tests := []struct {

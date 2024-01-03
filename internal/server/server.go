@@ -11,7 +11,7 @@ import (
 	"net/http"
 )
 
-func Run(cfg *config.Config) error {
+func Run(cfg *config.ServerConfig) error {
 
 	gRepo := repos.NewGaugeRepo()
 	cRepo := repos.NewCounterRepo()

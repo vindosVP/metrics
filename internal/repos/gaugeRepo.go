@@ -15,12 +15,12 @@ func NewGaugeRepo() *GaugeRepo {
 	return &GaugeRepo{metrics: make(map[string]float64)}
 }
 
-func (g GaugeRepo) Update(name string, v float64) (float64, error) {
+func (g *GaugeRepo) Update(name string, v float64) (float64, error) {
 	g.metrics[name] = v
 	return v, nil
 }
 
-func (g GaugeRepo) Get(name string) (float64, error) {
+func (g *GaugeRepo) Get(name string) (float64, error) {
 	v, ok := g.metrics[name]
 	if !ok {
 		return 0, ErrMetricNotRegistered
@@ -29,6 +29,6 @@ func (g GaugeRepo) Get(name string) (float64, error) {
 	return v, nil
 }
 
-func (g GaugeRepo) GetAll() (map[string]float64, error) {
+func (g *GaugeRepo) GetAll() (map[string]float64, error) {
 	return g.metrics, nil
 }

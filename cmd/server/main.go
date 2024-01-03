@@ -9,7 +9,7 @@ import (
 
 func main() {
 	log.Print("Starting metrics server")
-	cfg := config.New()
+	cfg := config.NewServerConfig()
 	err := server.Run(cfg)
 	if err != nil {
 		log.Fatalf(fmt.Sprintf("Failed to start server: %v", err))

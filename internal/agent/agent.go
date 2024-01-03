@@ -1,37 +1,28 @@
 package agent
 
 import (
+	"github.com/vindosVP/metrics/internal/collector"
+	"github.com/vindosVP/metrics/internal/config"
+	"github.com/vindosVP/metrics/internal/repos"
+	"github.com/vindosVP/metrics/internal/sender"
+	"github.com/vindosVP/metrics/internal/storage/memstorage"
 	"sync"
 )
 
-const (
-	gauge   = metricType("gauge")
-	counter = metricType("counter")
-)
-
-type metricType string
-
-type storage struct {
-	gaugeMetrics   map[string]float64
-	counterMetrics map[string]int64
-	mu             sync.Mutex
-}
-
 func Run() error {
+	cfg := config.NewAgentConfig()
 
-	cfg := NewConfig()
+	cRepo := repos.NewCounterRepo()
+	gRepo := repos.NewGaugeRepo()
+	storage := memstorage.New(gRepo, cRepo)
 
-	s := &storage{
-		gaugeMetrics:   make(map[string]float64),
-		counterMetrics: make(map[string]int64),
-	}
-	s.counterMetrics["PollCount"] = 0
+	c := collector.New(cfg, storage)
+	s := sender.New(cfg, storage)
 
-	var wg sync.WaitGroup
-
+	wg := sync.WaitGroup{}
 	wg.Add(2)
-	go collect(s, cfg, &wg)
-	go send(s, cfg, &wg)
+	go c.Run()
+	go s.Run()
 	wg.Wait()
 
 	return nil
