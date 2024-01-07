@@ -2,30 +2,66 @@ package config
 
 import (
 	"flag"
+	"github.com/caarlos0/env/v10"
+	"log"
 )
 
 type ServerConfig struct {
-	RunAddr string
+	RunAddr string `env:"ADDRESS"`
 }
 
 type AgentConfig struct {
-	ServerAddr     string
-	PollInterval   int
-	ReportInterval int
+	ServerAddr     string `env:"ADDRESS"`
+	PollInterval   int    `env:"POLL_INTERVAL"`
+	ReportInterval int    `env:"REPORT_INTERVAL"`
 }
 
 func NewAgentConfig() *AgentConfig {
-	config := &AgentConfig{}
-	flag.StringVar(&config.ServerAddr, "a", "localhost:8080", "metrics server address")
-	flag.IntVar(&config.PollInterval, "p", 2, "metrics poll interval")
-	flag.IntVar(&config.ReportInterval, "r", 10, "report interval")
+
+	flagConfig := &AgentConfig{}
+	flag.StringVar(&flagConfig.ServerAddr, "a", "localhost:8080", "metrics server address")
+	flag.IntVar(&flagConfig.PollInterval, "p", 2, "metrics poll interval")
+	flag.IntVar(&flagConfig.ReportInterval, "r", 10, "report interval")
 	flag.Parse()
-	return config
+
+	envConfig := &AgentConfig{}
+	if err := env.Parse(envConfig); err != nil {
+		log.Fatalf("Failed to parse env config: %v", err)
+	}
+
+	cfg := &AgentConfig{}
+	cfg.ServerAddr = envConfig.ServerAddr
+	cfg.PollInterval = envConfig.PollInterval
+	cfg.ReportInterval = envConfig.ReportInterval
+	if cfg.ServerAddr == "" {
+		cfg.ServerAddr = flagConfig.ServerAddr
+	}
+	if cfg.PollInterval == 0 {
+		cfg.PollInterval = flagConfig.PollInterval
+	}
+	if cfg.ReportInterval == 0 {
+		cfg.ReportInterval = flagConfig.ReportInterval
+	}
+
+	return cfg
 }
 
 func NewServerConfig() *ServerConfig {
-	config := &ServerConfig{}
-	flag.StringVar(&config.RunAddr, "a", "localhost:8080", "address and port to run server")
+
+	flagConfig := &ServerConfig{}
+	flag.StringVar(&flagConfig.RunAddr, "a", "localhost:8080", "address and port to run server")
 	flag.Parse()
-	return config
+
+	envConfig := &ServerConfig{}
+	if err := env.Parse(envConfig); err != nil {
+		log.Fatalf("Failed to parse env config: %v", err)
+	}
+
+	cfg := &ServerConfig{}
+	cfg.RunAddr = envConfig.RunAddr
+	if cfg.RunAddr == "" {
+		cfg.RunAddr = flagConfig.RunAddr
+	}
+
+	return cfg
 }
