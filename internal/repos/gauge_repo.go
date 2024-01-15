@@ -1,14 +1,10 @@
 package repos
 
-//go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=Gauge
-type Gauge interface {
-	Update(name string, v float64) (float64, error)
-	Get(name string) (float64, error)
-	GetAll() (map[string]float64, error)
-}
+import "sync"
 
 type GaugeRepo struct {
 	metrics map[string]float64
+	sync.Mutex
 }
 
 func NewGaugeRepo() *GaugeRepo {
@@ -16,19 +12,29 @@ func NewGaugeRepo() *GaugeRepo {
 }
 
 func (g *GaugeRepo) Update(name string, v float64) (float64, error) {
+	g.Lock()
 	g.metrics[name] = v
-	return v, nil
+	cVal := g.metrics[name]
+	g.Unlock()
+	return cVal, nil
 }
 
 func (g *GaugeRepo) Get(name string) (float64, error) {
+	g.Lock()
 	v, ok := g.metrics[name]
 	if !ok {
 		return 0, ErrMetricNotRegistered
 	}
-
+	g.Unlock()
 	return v, nil
 }
 
 func (g *GaugeRepo) GetAll() (map[string]float64, error) {
-	return g.metrics, nil
+	g.Lock()
+	metrics := make(map[string]float64, len(g.metrics))
+	for key, val := range g.metrics {
+		metrics[key] = val
+	}
+	g.Unlock()
+	return metrics, nil
 }

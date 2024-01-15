@@ -3,7 +3,7 @@ package memstorage
 import (
 	"errors"
 	"github.com/stretchr/testify/assert"
-	"github.com/vindosVP/metrics/internal/repos/mocks"
+	"github.com/vindosVP/metrics/internal/storage/memstorage/mocks"
 	"testing"
 )
 

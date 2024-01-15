@@ -1,15 +1,10 @@
 package repos
 
-//go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=Counter
-type Counter interface {
-	Update(name string, v int64) (int64, error)
-	Get(name string) (int64, error)
-	GetAll() (map[string]int64, error)
-	Set(name string, v int64) (int64, error)
-}
+import "sync"
 
 type CounterRepo struct {
 	metrics map[string]int64
+	sync.Mutex
 }
 
 func NewCounterRepo() *CounterRepo {
@@ -17,6 +12,7 @@ func NewCounterRepo() *CounterRepo {
 }
 
 func (c *CounterRepo) Update(name string, v int64) (int64, error) {
+	c.Lock()
 	currentV, ok := c.metrics[name]
 
 	var newV int64
@@ -26,25 +22,34 @@ func (c *CounterRepo) Update(name string, v int64) (int64, error) {
 		newV = v
 	}
 	c.metrics[name] = newV
-
+	c.Unlock()
 	return newV, nil
 
 }
 
 func (c *CounterRepo) Get(name string) (int64, error) {
+	c.Lock()
 	v, ok := c.metrics[name]
 	if !ok {
 		return 0, ErrMetricNotRegistered
 	}
-
+	c.Unlock()
 	return v, nil
 }
 
 func (c *CounterRepo) GetAll() (map[string]int64, error) {
-	return c.metrics, nil
+	c.Lock()
+	metrics := make(map[string]int64, len(c.metrics))
+	for key, val := range c.metrics {
+		metrics[key] = val
+	}
+	c.Unlock()
+	return metrics, nil
 }
 
 func (c *CounterRepo) Set(name string, v int64) (int64, error) {
+	c.Lock()
 	c.metrics[name] = v
+	c.Unlock()
 	return c.metrics[name], nil
 }

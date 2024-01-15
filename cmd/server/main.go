@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/vindosVP/metrics/internal/config"
+	"github.com/vindosVP/metrics/cmd/server/config"
 	"github.com/vindosVP/metrics/internal/server"
 	"log"
 )

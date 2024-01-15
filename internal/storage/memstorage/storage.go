@@ -1,13 +1,26 @@
 package memstorage
 
-import "github.com/vindosVP/metrics/internal/repos"
-
-type Storage struct {
-	gRepo repos.Gauge
-	cRepo repos.Counter
+//go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=Counter
+type Counter interface {
+	Update(name string, v int64) (int64, error)
+	Get(name string) (int64, error)
+	GetAll() (map[string]int64, error)
+	Set(name string, v int64) (int64, error)
 }
 
-func New(gRepo repos.Gauge, cRepo repos.Counter) *Storage {
+//go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=Gauge
+type Gauge interface {
+	Update(name string, v float64) (float64, error)
+	Get(name string) (float64, error)
+	GetAll() (map[string]float64, error)
+}
+
+type Storage struct {
+	gRepo Gauge
+	cRepo Counter
+}
+
+func New(gRepo Gauge, cRepo Counter) *Storage {
 	return &Storage{
 		gRepo: gRepo,
 		cRepo: cRepo,

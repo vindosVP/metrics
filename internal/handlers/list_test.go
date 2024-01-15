@@ -4,7 +4,7 @@ import (
 	"errors"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
-	"github.com/vindosVP/metrics/internal/storage/mocks"
+	"github.com/vindosVP/metrics/internal/handlers/mocks"
 	"net/http"
 	"net/http/httptest"
 	"testing"

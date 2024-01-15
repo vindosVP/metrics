@@ -3,7 +3,7 @@ package collector
 import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/vindosVP/metrics/internal/config"
+	"github.com/vindosVP/metrics/cmd/agent/config"
 	"github.com/vindosVP/metrics/internal/repos"
 	"github.com/vindosVP/metrics/internal/storage/memstorage"
 	"testing"

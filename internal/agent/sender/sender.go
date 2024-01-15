@@ -3,22 +3,32 @@ package sender
 import (
 	"fmt"
 	"github.com/go-resty/resty/v2"
-	"github.com/vindosVP/metrics/internal/config"
-	"github.com/vindosVP/metrics/internal/storage"
+	"github.com/vindosVP/metrics/cmd/agent/config"
 	"log"
 	"net/http"
 	"time"
 )
 
+//go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=MetricsStorage
+type MetricsStorage interface {
+	UpdateGauge(name string, v float64) (float64, error)
+	UpdateCounter(name string, v int64) (int64, error)
+	SetCounter(name string, v int64) (int64, error)
+	GetGauge(name string) (float64, error)
+	GetAllGauge() (map[string]float64, error)
+	GetCounter(name string) (int64, error)
+	GetAllCounter() (map[string]int64, error)
+}
+
 type Sender struct {
-	ReportInterval int
+	ReportInterval time.Duration
 	ServerAddr     string
 	Done           <-chan struct{}
-	Storage        storage.MetricsStorage
+	Storage        MetricsStorage
 	Client         *resty.Client
 }
 
-func New(cfg *config.AgentConfig, s storage.MetricsStorage) *Sender {
+func New(cfg *config.AgentConfig, s MetricsStorage) *Sender {
 	return &Sender{
 		ReportInterval: cfg.ReportInterval,
 		ServerAddr:     cfg.ServerAddr,
@@ -28,7 +38,7 @@ func New(cfg *config.AgentConfig, s storage.MetricsStorage) *Sender {
 }
 
 func (s *Sender) Run() {
-	tick := time.NewTicker(time.Duration(s.ReportInterval) * time.Second)
+	tick := time.NewTicker(s.ReportInterval * time.Second)
 	defer tick.Stop()
 
 	for {

@@ -2,42 +2,34 @@ package handlers
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/vindosVP/metrics/internal/storage"
 	"log"
 	"net/http"
 	"strconv"
 )
 
-const (
-	counter = "counter"
-	gauge   = "gauge"
-)
+//go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=MetricsStorage
+type MetricsStorage interface {
+	UpdateGauge(name string, v float64) (float64, error)
+	UpdateCounter(name string, v int64) (int64, error)
+	SetCounter(name string, v int64) (int64, error)
+	GetGauge(name string) (float64, error)
+	GetAllGauge() (map[string]float64, error)
+	GetCounter(name string) (int64, error)
+	GetAllCounter() (map[string]int64, error)
+}
 
-func Update(s storage.MetricsStorage) http.HandlerFunc {
+func Update(s MetricsStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 
+		ok, reason, code := validate(req, true)
+		if !ok {
+			http.Error(w, reason, code)
+			return
+		}
+
 		metricType := chi.URLParam(req, "type")
-		if metricType == "" {
-			http.Error(w, "type is missing in parameters", http.StatusBadRequest)
-			return
-		}
-
-		if metricType != counter && metricType != gauge {
-			http.Error(w, "invalid type parameter value", http.StatusBadRequest)
-			return
-		}
-
 		metricName := chi.URLParam(req, "name")
-		if metricName == "" {
-			http.Error(w, "name is missing in parameters", http.StatusNotFound)
-			return
-		}
-
 		metricValue := chi.URLParam(req, "value")
-		if metricValue == "" {
-			http.Error(w, "value is missing in parameters", http.StatusBadRequest)
-			return
-		}
 
 		switch metricType {
 		case counter:

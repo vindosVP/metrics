@@ -1,10 +1,10 @@
 package agent
 
 import (
-	"github.com/vindosVP/metrics/internal/collector"
-	"github.com/vindosVP/metrics/internal/config"
+	"github.com/vindosVP/metrics/cmd/agent/config"
+	"github.com/vindosVP/metrics/internal/agent/collector"
+	"github.com/vindosVP/metrics/internal/agent/sender"
 	"github.com/vindosVP/metrics/internal/repos"
-	"github.com/vindosVP/metrics/internal/sender"
 	"github.com/vindosVP/metrics/internal/storage/memstorage"
 	"sync"
 )

@@ -3,30 +3,21 @@ package handlers
 import (
 	"github.com/go-chi/chi/v5"
 	"github.com/vindosVP/metrics/internal/repos"
-	"github.com/vindosVP/metrics/internal/storage"
 	"net/http"
 	"strconv"
 )
 
-func Get(s storage.MetricsStorage) http.HandlerFunc {
+func Get(s MetricsStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 
+		ok, reason, code := validate(req, false)
+		if !ok {
+			http.Error(w, reason, code)
+			return
+		}
+
 		metricType := chi.URLParam(req, "type")
-		if metricType == "" {
-			http.Error(w, "type is missing in parameters", http.StatusBadRequest)
-			return
-		}
-
-		if metricType != counter && metricType != gauge {
-			http.Error(w, "invalid type parameter value", http.StatusBadRequest)
-			return
-		}
-
 		metricName := chi.URLParam(req, "name")
-		if metricName == "" {
-			http.Error(w, "name is missing in parameters", http.StatusNotFound)
-			return
-		}
 
 		switch metricType {
 		case counter:

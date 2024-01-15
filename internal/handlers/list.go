@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"fmt"
-	"github.com/vindosVP/metrics/internal/storage"
 	"net/http"
 	"strings"
 )
@@ -30,7 +29,7 @@ const htmlTemplate = `
 </body>
 </html>`
 
-func List(s storage.MetricsStorage) http.HandlerFunc {
+func List(s MetricsStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 
 		counterMetrics, err := s.GetAllCounter()

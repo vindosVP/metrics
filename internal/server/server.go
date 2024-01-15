@@ -3,7 +3,7 @@ package server
 import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/vindosVP/metrics/internal/config"
+	config2 "github.com/vindosVP/metrics/cmd/server/config"
 	"github.com/vindosVP/metrics/internal/handlers"
 	"github.com/vindosVP/metrics/internal/repos"
 	"github.com/vindosVP/metrics/internal/storage/memstorage"
@@ -11,7 +11,7 @@ import (
 	"net/http"
 )
 
-func Run(cfg *config.ServerConfig) error {
+func Run(cfg *config2.ServerConfig) error {
 
 	gRepo := repos.NewGaugeRepo()
 	cRepo := repos.NewCounterRepo()
