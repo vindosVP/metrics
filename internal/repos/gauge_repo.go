@@ -23,6 +23,7 @@ func (g *GaugeRepo) Get(name string) (float64, error) {
 	g.Lock()
 	v, ok := g.metrics[name]
 	if !ok {
+		g.Unlock()
 		return 0, ErrMetricNotRegistered
 	}
 	g.Unlock()
