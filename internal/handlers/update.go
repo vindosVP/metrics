@@ -2,7 +2,8 @@ package handlers
 
 import (
 	"github.com/go-chi/chi/v5"
-	"log"
+	"github.com/vindosVP/metrics/pkg/logger"
+	"go.uber.org/zap"
 	"net/http"
 	"strconv"
 )
@@ -43,7 +44,7 @@ func Update(s MetricsStorage) http.HandlerFunc {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			log.Printf("Updated value of %s with %v", metricName, cval)
+			logger.Log.Info("Updated metric value", zap.String("name", metricName), zap.Int64("value", cval))
 		case gauge:
 			gval, err := strconv.ParseFloat(metricValue, 64)
 			if err != nil {
@@ -55,7 +56,7 @@ func Update(s MetricsStorage) http.HandlerFunc {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			log.Printf("Updated value of %s with %v", metricName, gval)
+			logger.Log.Info("Updated metric value", zap.String("name", metricName), zap.Float64("value", gval))
 		}
 
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")

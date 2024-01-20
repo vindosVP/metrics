@@ -7,13 +7,15 @@ import (
 )
 
 type ServerConfig struct {
-	RunAddr string `env:"ADDRESS"`
+	RunAddr  string `env:"ADDRESS"`
+	LogLevel string `env:"LOG_LEVEL"`
 }
 
 func NewServerConfig() *ServerConfig {
 
 	flagConfig := &ServerConfig{}
 	flag.StringVar(&flagConfig.RunAddr, "a", "localhost:8080", "address and port to run server")
+	flag.StringVar(&flagConfig.LogLevel, "l", "info", "log level")
 	flag.Parse()
 
 	envConfig := &ServerConfig{}
@@ -23,8 +25,12 @@ func NewServerConfig() *ServerConfig {
 
 	cfg := &ServerConfig{}
 	cfg.RunAddr = envConfig.RunAddr
+	cfg.LogLevel = envConfig.LogLevel
 	if cfg.RunAddr == "" {
 		cfg.RunAddr = flagConfig.RunAddr
+	}
+	if cfg.LogLevel == "" {
+		cfg.LogLevel = flagConfig.LogLevel
 	}
 
 	return cfg

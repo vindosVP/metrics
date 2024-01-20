@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/go-resty/resty/v2"
 	"github.com/vindosVP/metrics/cmd/agent/config"
+	"github.com/vindosVP/metrics/pkg/logger"
+	"go.uber.org/zap"
 	"log"
 	"net/http"
 	"time"
@@ -56,7 +58,11 @@ func (s *Sender) SendMetrics() {
 	s.sendCounters()
 	_, err := s.Storage.SetCounter("PollCount", 0)
 	if err != nil {
-		log.Printf("Failed to set PollCount to 0: %v", err)
+		logger.Log.Error(
+			"Failed to set metric",
+			zap.String("name", "PollCount"),
+			zap.Int64("value", 0),
+			zap.Error(err))
 	}
 }
 
@@ -69,14 +75,23 @@ func (s *Sender) sendGauges() {
 		url := fmt.Sprintf("http://%s/update/gauge/%s/%f", s.ServerAddr, key, value)
 		resp, err := s.Client.R().Post(url)
 		if err != nil {
-			log.Printf("Failed to send %s:%v", key, err)
+			logger.Log.Error(
+				"Failed to send metric",
+				zap.String("name", key),
+				zap.Error(err))
 			continue
 		}
 		if resp.StatusCode() != http.StatusOK {
-			log.Printf("Failed to send %s: resp code: %d, data %s", key, resp.StatusCode(), string(resp.Body()))
+			logger.Log.Error(
+				"Failed to send metric",
+				zap.String("name", key),
+				zap.Int("code", resp.StatusCode()),
+				zap.String("data", string(resp.Body())))
 			continue
 		}
-		log.Printf("Metric %s sent sucessfully", key)
+		logger.Log.Info(
+			"Metric sent successfully",
+			zap.String("name", key))
 	}
 }
 
@@ -89,13 +104,22 @@ func (s *Sender) sendCounters() {
 		url := fmt.Sprintf("http://%s/update/counter/%s/%d", s.ServerAddr, key, value)
 		resp, err := s.Client.R().Post(url)
 		if err != nil {
-			log.Printf("Failed to send %s:%v", key, err)
+			logger.Log.Error(
+				"Failed to send metric",
+				zap.String("name", key),
+				zap.Error(err))
 			continue
 		}
 		if resp.StatusCode() != http.StatusOK {
-			log.Printf("Failed to send %s: resp code: %d, data %s", key, resp.StatusCode(), string(resp.Body()))
+			logger.Log.Error(
+				"Failed to send metric",
+				zap.String("name", key),
+				zap.Int("code", resp.StatusCode()),
+				zap.String("data", string(resp.Body())))
 			continue
 		}
-		log.Printf("Metric %s sent sucessfully", key)
+		logger.Log.Info(
+			"Metric sent successfully",
+			zap.String("name", key))
 	}
 }
