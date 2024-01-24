@@ -1,97 +1,62 @@
 package handlers
 
 import (
-	"bytes"
-	"encoding/json"
-	"github.com/vindosVP/metrics/internal/models"
+	"github.com/go-chi/chi/v5"
 	"github.com/vindosVP/metrics/internal/repos"
-	"github.com/vindosVP/metrics/pkg/logger"
-	"go.uber.org/zap"
 	"net/http"
+	"strconv"
 )
 
 func Get(s MetricsStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 
-		metrics := &models.Metrics{}
-		var buf bytes.Buffer
-		_, err := buf.ReadFrom(req.Body)
-		if err != nil {
-			logger.Log.Error("Failed to read request body")
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if err = json.Unmarshal(buf.Bytes(), &metrics); err != nil {
-			logger.Log.Error("Failed to unmarshal request body")
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		ok, reason, status := validateGet(metrics)
+		ok, reason, code := validate(req, false)
 		if !ok {
-			http.Error(w, reason, status)
+			http.Error(w, reason, code)
 			return
 		}
 
-		fields := []zap.Field{
-			zap.String("name", metrics.ID),
-			zap.String("type", metrics.MType),
-		}
-		resp := &models.Metrics{}
+		metricType := chi.URLParam(req, "type")
+		metricName := chi.URLParam(req, "name")
 
-		switch metrics.MType {
+		switch metricType {
 		case counter:
-			val, err := s.GetCounter(metrics.ID)
+			cvalue, err := s.GetCounter(metricName)
 			if err != nil {
 				var status int
 				if err == repos.ErrMetricNotRegistered {
 					status = http.StatusNotFound
 				} else {
 					status = http.StatusInternalServerError
-					fields = append(fields, zap.Error(err))
-					logger.Log.Error("Failed to get metric value", fields...)
 				}
 				http.Error(w, err.Error(), status)
 				return
 			}
-
-			floatVal := float64(val)
-			resp.ID = metrics.ID
-			resp.MType = counter
-			resp.Value = &floatVal
+			_, err = w.Write([]byte(strconv.FormatInt(cvalue, 10)))
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		case gauge:
-			val, err := s.GetGauge(metrics.ID)
+			gvalue, err := s.GetGauge(metricName)
 			if err != nil {
 				var status int
 				if err == repos.ErrMetricNotRegistered {
 					status = http.StatusNotFound
 				} else {
 					status = http.StatusInternalServerError
-					fields = append(fields, zap.Error(err))
-					logger.Log.Error("Failed to get metric value", fields...)
 				}
 				http.Error(w, err.Error(), status)
 				return
 			}
-
-			resp.ID = metrics.ID
-			resp.MType = gauge
-			resp.Value = &val
+			_, err = w.Write([]byte(strconv.FormatFloat(gvalue, 'f', -1, 64)))
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 
-		respData, err := json.Marshal(resp)
-		if err != nil {
-			logger.Log.Error("Failed to marshal response")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		_, err = w.Write(respData)
-		if err != nil {
-			logger.Log.Error("Failed to write response")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
 	}
 }

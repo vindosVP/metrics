@@ -3,13 +3,10 @@ package handlers
 import (
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/vindosVP/metrics/internal/repos"
 	"github.com/vindosVP/metrics/internal/storage/memstorage"
-	"io"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 )
 
@@ -18,40 +15,35 @@ func TestUpdate(t *testing.T) {
 	type want struct {
 		code        int
 		contentType string
-		wantBody    bool
-		body        string
 	}
 
 	tests := []struct {
 		name   string
 		method string
-		body   string
+		url    string
 		want   want
 	}{
 		{
 			name:   "gauge ok",
+			url:    "/update/gauge/Alloc/12.5",
 			method: http.MethodPost,
-			body:   "{\"id\":\"Alloc\",\"type\":\"gauge\",\"value\":12.5}",
 			want: want{
 				code:        http.StatusOK,
-				contentType: "application/json",
-				wantBody:    true,
-				body:        "{\"id\":\"Alloc\",\"type\":\"gauge\",\"value\":12.5}",
+				contentType: "text/plain; charset=utf-8",
 			},
 		},
 		{
 			name:   "counter ok",
+			url:    "/update/counter/PollCount/12",
 			method: http.MethodPost,
-			body:   "{\"id\":\"PollCount\",\"type\":\"counter\",\"delta\":125}",
 			want: want{
 				code:        http.StatusOK,
-				contentType: "application/json",
-				wantBody:    true,
-				body:        "{\"id\":\"PollCount\",\"type\":\"counter\",\"value\":125}",
+				contentType: "text/plain; charset=utf-8",
 			},
 		},
 		{
 			name:   "wrong method",
+			url:    "/update/counter/PollCount/12",
 			method: http.MethodGet,
 			want: want{
 				code:        http.StatusMethodNotAllowed,
@@ -59,54 +51,27 @@ func TestUpdate(t *testing.T) {
 			},
 		},
 		{
-			name:   "wrong type",
+			name:   "gauge bad request",
+			url:    "/update/gauge/Alloc/true",
 			method: http.MethodPost,
-			body:   "{\"id\":\"Alloc\",\"type\":\"WrongType\",\"value\":12.5}",
 			want: want{
 				code:        http.StatusBadRequest,
 				contentType: "text/plain; charset=utf-8",
 			},
 		},
 		{
-			name:   "no id",
+			name:   "counter bad request",
+			url:    "/update/counter/PollCount/11.3",
 			method: http.MethodPost,
-			body:   "{\"type\":\"gauge\",\"value\":12.5}",
-			want: want{
-				code:        http.StatusNotFound,
-				contentType: "text/plain; charset=utf-8",
-			},
-		},
-		{
-			name:   "gauge wrong value",
-			method: http.MethodPost,
-			body:   "{\"id\":\"Alloc\",\"type\":\"gauge\",\"value\":true}",
 			want: want{
 				code:        http.StatusBadRequest,
 				contentType: "text/plain; charset=utf-8",
 			},
 		},
 		{
-			name:   "gauge no value",
+			name:   "invalid type",
+			url:    "/update/test/PollCount/11.3",
 			method: http.MethodPost,
-			body:   "{\"id\":\"Alloc\",\"type\":\"gauge\"}",
-			want: want{
-				code:        http.StatusBadRequest,
-				contentType: "text/plain; charset=utf-8",
-			},
-		},
-		{
-			name:   "counter wrong value",
-			method: http.MethodPost,
-			body:   "{\"id\":\"PollCount\",\"type\":\"counter\",\"value\":true}",
-			want: want{
-				code:        http.StatusBadRequest,
-				contentType: "text/plain; charset=utf-8",
-			},
-		},
-		{
-			name:   "counter no value",
-			method: http.MethodPost,
-			body:   "{\"id\":\"PollCount\",\"type\":\"counter\"}",
 			want: want{
 				code:        http.StatusBadRequest,
 				contentType: "text/plain; charset=utf-8",
@@ -122,20 +87,15 @@ func TestUpdate(t *testing.T) {
 			storage := memstorage.New(gRepo, cRepo)
 
 			r := chi.NewRouter()
-			r.Post("/update", Update(storage))
+			r.Post("/update/{type}/{name}/{value}", Update(storage))
 
-			req := httptest.NewRequest(tt.method, "/update", strings.NewReader(tt.body))
+			req := httptest.NewRequest(tt.method, tt.url, nil)
 			w := httptest.NewRecorder()
 			r.ServeHTTP(w, req)
 			res := w.Result()
 
 			assert.Equal(t, tt.want.code, res.StatusCode)
 			assert.Equal(t, tt.want.contentType, res.Header.Get("Content-Type"))
-			if tt.want.wantBody {
-				data, err := io.ReadAll(res.Body)
-				require.NoError(t, err)
-				assert.Equal(t, tt.want.body, string(data))
-			}
 			defer res.Body.Close()
 		})
 	}
