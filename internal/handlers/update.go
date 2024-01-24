@@ -1,11 +1,12 @@
 package handlers
 
 import (
-	"github.com/go-chi/chi/v5"
+	"bytes"
+	"encoding/json"
+	"github.com/vindosVP/metrics/internal/models"
 	"github.com/vindosVP/metrics/pkg/logger"
 	"go.uber.org/zap"
 	"net/http"
-	"strconv"
 )
 
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=MetricsStorage
@@ -22,44 +23,81 @@ type MetricsStorage interface {
 func Update(s MetricsStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 
-		ok, reason, code := validate(req, true)
+		metrics := &models.Metrics{}
+		var buf bytes.Buffer
+		_, err := buf.ReadFrom(req.Body)
+		if err != nil {
+			logger.Log.Error("Failed to read request body")
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if err = json.Unmarshal(buf.Bytes(), &metrics); err != nil {
+			logger.Log.Error("Failed to unmarshal request body")
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		ok, reason, code := validateUpdate(metrics)
 		if !ok {
 			http.Error(w, reason, code)
 			return
 		}
 
-		metricType := chi.URLParam(req, "type")
-		metricName := chi.URLParam(req, "name")
-		metricValue := chi.URLParam(req, "value")
+		fields := []zap.Field{
+			zap.String("name", metrics.ID),
+			zap.String("type", metrics.MType),
+		}
+		resp := &models.Metrics{}
 
-		switch metricType {
+		switch metrics.MType {
 		case counter:
-			cval, err := strconv.ParseInt(metricValue, 10, 64)
+			delta := *metrics.Delta
+			fields = append(fields, zap.Int64("delta", delta))
+			val, err := s.UpdateCounter(metrics.ID, delta)
 			if err != nil {
-				http.Error(w, "invalid value type", http.StatusBadRequest)
-				return
-			}
-			_, err = s.UpdateCounter(metricName, cval)
-			if err != nil {
+				fields = append(fields, zap.Error(err))
+				logger.Log.Error("Failed to update metric value", fields...)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			logger.Log.Info("Updated metric value", zap.String("name", metricName), zap.Int64("value", cval))
+
+			floatVal := float64(val)
+			resp.ID = metrics.ID
+			resp.MType = counter
+			resp.Value = &floatVal
+
+			logger.Log.Info("Updated metric value", fields...)
 		case gauge:
-			gval, err := strconv.ParseFloat(metricValue, 64)
+			value := *metrics.Value
+			fields = append(fields, zap.Float64("value", value))
+			val, err := s.UpdateGauge(metrics.ID, value)
 			if err != nil {
-				http.Error(w, "invalid value type", http.StatusBadRequest)
-				return
-			}
-			_, err = s.UpdateGauge(metricName, gval)
-			if err != nil {
+				fields = append(fields, zap.Error(err))
+				logger.Log.Error("Failed to update metric value", fields...)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			logger.Log.Info("Updated metric value", zap.String("name", metricName), zap.Float64("value", gval))
+
+			resp.ID = metrics.ID
+			resp.MType = gauge
+			resp.Value = &val
+
+			logger.Log.Info("Updated metric value", fields...)
 		}
 
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
+		respData, err := json.Marshal(resp)
+		if err != nil {
+			logger.Log.Error("Failed to marshal response")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, err = w.Write(respData)
+		if err != nil {
+			logger.Log.Error("Failed to write response")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 }

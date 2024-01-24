@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"github.com/go-resty/resty/v2"
 	"github.com/vindosVP/metrics/cmd/agent/config"
+	"github.com/vindosVP/metrics/internal/models"
 	"github.com/vindosVP/metrics/pkg/logger"
 	"go.uber.org/zap"
-	"log"
 	"net/http"
 	"time"
 )
@@ -29,6 +29,11 @@ type Sender struct {
 	Storage        MetricsStorage
 	Client         *resty.Client
 }
+
+const (
+	counter = "counter"
+	gauge   = "gauge"
+)
 
 func New(cfg *config.AgentConfig, s MetricsStorage) *Sender {
 	return &Sender{
@@ -69,57 +74,65 @@ func (s *Sender) SendMetrics() {
 func (s *Sender) sendGauges() {
 	m, err := s.Storage.GetAllGauge()
 	if err != nil {
-		log.Print("Failed to get gauge metrics")
+		logger.Log.Error("Failed to get gauge metrics", zap.Error(err))
 	}
+	url := fmt.Sprintf("http://%s/update", s.ServerAddr)
 	for key, value := range m {
-		url := fmt.Sprintf("http://%s/update/gauge/%s/%f", s.ServerAddr, key, value)
-		resp, err := s.Client.R().Post(url)
+		fields := []zap.Field{
+			zap.String("name", key),
+			zap.String("type", gauge),
+			zap.Float64("value", value),
+		}
+		metric := &models.Metrics{
+			ID:    key,
+			MType: gauge,
+			Value: &value,
+		}
+		resp, err := s.Client.R().SetBody(metric).Post(url)
 		if err != nil {
-			logger.Log.Error(
-				"Failed to send metric",
-				zap.String("name", key),
-				zap.Error(err))
+			fields = append(fields, zap.Error(err))
+			logger.Log.Error("Failed to send metric", fields...)
 			continue
 		}
 		if resp.StatusCode() != http.StatusOK {
-			logger.Log.Error(
-				"Failed to send metric",
-				zap.String("name", key),
-				zap.Int("code", resp.StatusCode()),
-				zap.String("data", string(resp.Body())))
+			fields = append(fields, zap.Int("code", resp.StatusCode()))
+			fields = append(fields, zap.String("data", string(resp.Body())))
+			logger.Log.Error("Failed to send metric", fields...)
 			continue
 		}
-		logger.Log.Info(
-			"Metric sent successfully",
-			zap.String("name", key))
+		logger.Log.Info("Metric sent successfully", fields...)
 	}
 }
 
 func (s *Sender) sendCounters() {
 	m, err := s.Storage.GetAllCounter()
 	if err != nil {
-		log.Print("Failed to get counter metrics")
+		logger.Log.Error("Failed to get counter metrics", zap.Error(err))
 	}
+	url := fmt.Sprintf("http://%s/update", s.ServerAddr)
 	for key, value := range m {
-		url := fmt.Sprintf("http://%s/update/counter/%s/%d", s.ServerAddr, key, value)
-		resp, err := s.Client.R().Post(url)
+		fields := []zap.Field{
+			zap.String("name", key),
+			zap.String("type", counter),
+			zap.Int64("value", value),
+		}
+		metric := &models.Metrics{
+			ID:    key,
+			MType: counter,
+			Delta: &value,
+		}
+		resp, err := s.Client.R().SetBody(metric).Post(url)
 		if err != nil {
-			logger.Log.Error(
-				"Failed to send metric",
-				zap.String("name", key),
-				zap.Error(err))
+			fields = append(fields, zap.Error(err))
+			logger.Log.Error("Failed to send metric", fields...)
 			continue
 		}
 		if resp.StatusCode() != http.StatusOK {
-			logger.Log.Error(
-				"Failed to send metric",
-				zap.String("name", key),
-				zap.Int("code", resp.StatusCode()),
-				zap.String("data", string(resp.Body())))
+			fields = append(fields, zap.Int("code", resp.StatusCode()))
+			fields = append(fields, zap.String("data", string(resp.Body())))
+			logger.Log.Error("Failed to send metric", fields...)
 			continue
 		}
-		logger.Log.Info(
-			"Metric sent successfully",
-			zap.String("name", key))
+		logger.Log.Info("Metric sent successfully", fields...)
 	}
 }

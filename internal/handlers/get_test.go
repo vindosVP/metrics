@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -37,7 +38,7 @@ func TestGet(t *testing.T) {
 		name        string
 		mockGauge   mockGauge
 		mockCounter mockCounter
-		url         string
+		body        string
 		method      string
 		want        want
 	}{
@@ -55,8 +56,8 @@ func TestGet(t *testing.T) {
 				value:  1,
 				err:    nil,
 			},
-			url:    "/value/test/name",
-			method: http.MethodGet,
+			body:   "{\"id\":\"Alloc\",\"type\":\"WrongType\"}",
+			method: http.MethodPost,
 			want: want{
 				code:        http.StatusBadRequest,
 				body:        "",
@@ -77,8 +78,8 @@ func TestGet(t *testing.T) {
 				value:  1,
 				err:    nil,
 			},
-			url:    "/value/test/name",
-			method: http.MethodPost,
+			body:   "{\"id\":\"Alloc\",\"type\":\"gauge\"}",
+			method: http.MethodGet,
 			want: want{
 				code:        http.StatusMethodNotAllowed,
 				body:        "",
@@ -99,8 +100,8 @@ func TestGet(t *testing.T) {
 				value:  0,
 				err:    unexpectedError,
 			},
-			url:    "/value/counter/test",
-			method: http.MethodGet,
+			body:   "{\"id\":\"test\",\"type\":\"counter\"}",
+			method: http.MethodPost,
 			want: want{
 				code:        http.StatusInternalServerError,
 				body:        "",
@@ -121,8 +122,8 @@ func TestGet(t *testing.T) {
 				value:  0,
 				err:    nil,
 			},
-			url:    "/value/gauge/test",
-			method: http.MethodGet,
+			body:   "{\"id\":\"test\",\"type\":\"gauge\"}",
+			method: http.MethodPost,
 			want: want{
 				code:        http.StatusInternalServerError,
 				body:        "",
@@ -143,8 +144,8 @@ func TestGet(t *testing.T) {
 				value:  0,
 				err:    nil,
 			},
-			url:    "/value/gauge/test",
-			method: http.MethodGet,
+			body:   "{\"id\":\"test\",\"type\":\"gauge\"}",
+			method: http.MethodPost,
 			want: want{
 				code:        http.StatusNotFound,
 				body:        "",
@@ -165,8 +166,8 @@ func TestGet(t *testing.T) {
 				value:  0,
 				err:    repos.ErrMetricNotRegistered,
 			},
-			url:    "/value/counter/test",
-			method: http.MethodGet,
+			body:   "{\"id\":\"test\",\"type\":\"counter\"}",
+			method: http.MethodPost,
 			want: want{
 				code:        http.StatusNotFound,
 				body:        "",
@@ -187,12 +188,12 @@ func TestGet(t *testing.T) {
 				value:  0,
 				err:    nil,
 			},
-			url:    "/value/gauge/test",
-			method: http.MethodGet,
+			body:   "{\"id\":\"test\",\"type\":\"gauge\"}",
+			method: http.MethodPost,
 			want: want{
 				code:        http.StatusOK,
-				body:        "122.44",
-				contentType: "text/plain; charset=utf-8",
+				body:        "{\"id\":\"test\",\"type\":\"gauge\",\"value\":122.44}",
+				contentType: "application/json",
 			},
 		},
 		{
@@ -209,12 +210,12 @@ func TestGet(t *testing.T) {
 				value:  111,
 				err:    nil,
 			},
-			url:    "/value/counter/test",
-			method: http.MethodGet,
+			body:   "{\"id\":\"test\",\"type\":\"counter\"}",
+			method: http.MethodPost,
 			want: want{
 				code:        http.StatusOK,
-				body:        "111",
-				contentType: "text/plain; charset=utf-8",
+				body:        "{\"id\":\"test\",\"type\":\"counter\",\"value\":111}",
+				contentType: "application/json",
 			},
 		},
 	}
@@ -230,9 +231,9 @@ func TestGet(t *testing.T) {
 			}
 
 			r := chi.NewRouter()
-			r.Get("/value/{type}/{name}", Get(mockStorage))
+			r.Post("/value", Get(mockStorage))
 
-			req := httptest.NewRequest(tt.method, tt.url, nil)
+			req := httptest.NewRequest(tt.method, "/value", strings.NewReader(tt.body))
 			w := httptest.NewRecorder()
 			r.ServeHTTP(w, req)
 			res := w.Result()
