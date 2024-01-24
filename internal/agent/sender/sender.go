@@ -76,7 +76,7 @@ func (s *Sender) sendGauges() {
 	if err != nil {
 		logger.Log.Error("Failed to get gauge metrics", zap.Error(err))
 	}
-	url := fmt.Sprintf("http://%s/update", s.ServerAddr)
+	url := fmt.Sprintf("http://%s/update/", s.ServerAddr)
 	for key, value := range m {
 		fields := []zap.Field{
 			zap.String("name", key),
@@ -109,7 +109,7 @@ func (s *Sender) sendCounters() {
 	if err != nil {
 		logger.Log.Error("Failed to get counter metrics", zap.Error(err))
 	}
-	url := fmt.Sprintf("http://%s/update", s.ServerAddr)
+	url := fmt.Sprintf("http://%s/update/", s.ServerAddr)
 	for key, value := range m {
 		fields := []zap.Field{
 			zap.String("name", key),

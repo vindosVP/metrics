@@ -61,10 +61,9 @@ func UpdateBody(s MetricsStorage) http.HandlerFunc {
 				return
 			}
 
-			floatVal := float64(val)
 			resp.ID = metrics.ID
 			resp.MType = counter
-			resp.Value = &floatVal
+			resp.Delta = &val
 
 			logger.Log.Info("Updated metric value", fields...)
 		case gauge:

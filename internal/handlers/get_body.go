@@ -55,10 +55,9 @@ func GetBody(s MetricsStorage) http.HandlerFunc {
 				return
 			}
 
-			floatVal := float64(val)
 			resp.ID = metrics.ID
 			resp.MType = counter
-			resp.Value = &floatVal
+			resp.Delta = &val
 		case gauge:
 			val, err := s.GetGauge(metrics.ID)
 			if err != nil {
