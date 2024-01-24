@@ -47,7 +47,7 @@ func TestUpdateBody(t *testing.T) {
 				code:        http.StatusOK,
 				contentType: "application/json",
 				wantBody:    true,
-				body:        "{\"id\":\"PollCount\",\"type\":\"counter\",\"value\":125}",
+				body:        "{\"id\":\"PollCount\",\"type\":\"counter\",\"delta\":125}",
 			},
 		},
 		{

@@ -214,7 +214,7 @@ func TestGetBody(t *testing.T) {
 			method: http.MethodPost,
 			want: want{
 				code:        http.StatusOK,
-				body:        "{\"id\":\"test\",\"type\":\"counter\",\"value\":111}",
+				body:        "{\"id\":\"test\",\"type\":\"counter\",\"delta\":111}",
 				contentType: "application/json",
 			},
 		},
