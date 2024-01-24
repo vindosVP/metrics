@@ -96,6 +96,8 @@ func toMap(stats *runtime.MemStats) map[string]float64 {
 		"LastGC":        float64(stats.LastGC),
 		"Lookups":       float64(stats.Lookups),
 		"MCacheSys":     float64(stats.MCacheSys),
+		"MCacheInuse":   float64(stats.MCacheInuse),
+		"NextGC":        float64(stats.NextGC),
 		"MSpanInuse":    float64(stats.MSpanInuse),
 		"MSpanSys":      float64(stats.MSpanSys),
 		"Mallocs":       float64(stats.Mallocs),
