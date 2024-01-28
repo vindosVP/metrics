@@ -9,6 +9,8 @@ import (
 	"github.com/vindosVP/metrics/internal/server/loader"
 	"github.com/vindosVP/metrics/internal/server/saver"
 	"github.com/vindosVP/metrics/internal/storage/memstorage"
+	"github.com/vindosVP/metrics/pkg/logger"
+	"go.uber.org/zap"
 	"log"
 	"net/http"
 )
@@ -23,8 +25,7 @@ func Run(cfg *config.ServerConfig) error {
 		dumpLoader := loader.New(cfg.FileStoragePath, storage)
 		err := dumpLoader.LoadMetrics()
 		if err != nil {
-			//logger.Log.Error("Failed to load dump", zap.Error(err))
-			return err
+			logger.Log.Error("Failed to load dump", zap.Error(err))
 		}
 	}
 
