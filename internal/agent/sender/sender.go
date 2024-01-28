@@ -105,7 +105,7 @@ func (s *Sender) sendGauges() {
 			logger.Log.Error("Failed to compress data", fields...)
 			continue
 		}
-		err = cw.Close()
+		cw.Close()
 		resp, err := s.Client.R().
 			SetHeader("Content-Encoding", "gzip").
 			SetBody(&b).
