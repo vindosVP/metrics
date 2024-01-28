@@ -1,6 +1,9 @@
 package sender
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/json"
 	"fmt"
 	"github.com/go-resty/resty/v2"
 	"github.com/vindosVP/metrics/cmd/agent/config"
@@ -88,7 +91,25 @@ func (s *Sender) sendGauges() {
 			MType: gauge,
 			Value: &value,
 		}
-		resp, err := s.Client.R().SetBody(metric).Post(url)
+		var b bytes.Buffer
+		data, err := json.Marshal(metric)
+		if err != nil {
+			fields = append(fields, zap.Error(err))
+			logger.Log.Error("Failed to marshal data", fields...)
+			continue
+		}
+		cw := gzip.NewWriter(&b)
+		_, err = cw.Write(data)
+		if err != nil {
+			fields = append(fields, zap.Error(err))
+			logger.Log.Error("Failed to compress data", fields...)
+			continue
+		}
+		err = cw.Close()
+		resp, err := s.Client.R().
+			SetHeader("Content-Encoding", "gzip").
+			SetBody(&b).
+			Post(url)
 		if err != nil {
 			fields = append(fields, zap.Error(err))
 			logger.Log.Error("Failed to send metric", fields...)
@@ -96,7 +117,6 @@ func (s *Sender) sendGauges() {
 		}
 		if resp.StatusCode() != http.StatusOK {
 			fields = append(fields, zap.Int("code", resp.StatusCode()))
-			fields = append(fields, zap.String("data", string(resp.Body())))
 			logger.Log.Error("Failed to send metric", fields...)
 			continue
 		}
@@ -121,7 +141,25 @@ func (s *Sender) sendCounters() {
 			MType: counter,
 			Delta: &value,
 		}
-		resp, err := s.Client.R().SetBody(metric).Post(url)
+		var b bytes.Buffer
+		data, err := json.Marshal(metric)
+		if err != nil {
+			fields = append(fields, zap.Error(err))
+			logger.Log.Error("Failed to marshal data", fields...)
+			continue
+		}
+		cw := gzip.NewWriter(&b)
+		_, err = cw.Write(data)
+		if err != nil {
+			fields = append(fields, zap.Error(err))
+			logger.Log.Error("Failed to compress data", fields...)
+			continue
+		}
+		cw.Close()
+		resp, err := s.Client.R().
+			SetHeader("Content-Encoding", "gzip").
+			SetBody(&b).
+			Post(url)
 		if err != nil {
 			fields = append(fields, zap.Error(err))
 			logger.Log.Error("Failed to send metric", fields...)
@@ -129,7 +167,6 @@ func (s *Sender) sendCounters() {
 		}
 		if resp.StatusCode() != http.StatusOK {
 			fields = append(fields, zap.Int("code", resp.StatusCode()))
-			fields = append(fields, zap.String("data", string(resp.Body())))
 			logger.Log.Error("Failed to send metric", fields...)
 			continue
 		}

@@ -51,12 +51,12 @@ func List(s MetricsStorage) http.HandlerFunc {
 
 		html := strings.Replace(htmlTemplate, "%metrics%", strings.Join(metricLines, ""), -1)
 
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, err = w.Write([]byte(html))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 	}
 }

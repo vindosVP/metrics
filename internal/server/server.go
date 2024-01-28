@@ -18,11 +18,11 @@ func Run(cfg *config.ServerConfig) error {
 	storage := memstorage.New(gRepo, cRepo)
 
 	r := chi.NewRouter()
-	r.Post("/update/", middleware.WithLogging(handlers.UpdateBody(storage)))
-	r.Post("/value/", middleware.WithLogging(handlers.GetBody(storage)))
+	r.Post("/update/", middleware.WithLogging(middleware.WithCompression(handlers.UpdateBody(storage))))
+	r.Post("/value/", middleware.WithLogging(middleware.WithCompression(handlers.GetBody(storage))))
 	r.Post("/update/{type}/{name}/{value}", middleware.WithLogging(handlers.Update(storage)))
 	r.Get("/value/{type}/{name}", middleware.WithLogging(handlers.Get(storage)))
-	r.Get("/", middleware.WithLogging(handlers.List(storage)))
+	r.Get("/", middleware.WithLogging(middleware.WithCompression(handlers.List(storage))))
 	r.Handle("/assets/*", http.StripPrefix("/assets", http.FileServer(http.Dir("assets"))))
 
 	log.Printf("Running server on %s", cfg.RunAddr)
