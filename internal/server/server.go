@@ -23,6 +23,7 @@ func Run(cfg *config.ServerConfig) error {
 		dumpLoader := loader.New(cfg.FileStoragePath, storage)
 		err := dumpLoader.LoadMetrics()
 		if err != nil {
+			//logger.Log.Error("Failed to load dump", zap.Error(err))
 			return err
 		}
 	}
