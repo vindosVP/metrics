@@ -6,17 +6,12 @@ import (
 	"net/http"
 )
 
-const (
-	counter = "counter"
-	gauge   = "gauge"
-)
-
 func validate(req *http.Request, checkValue bool) (bool, string, int) {
 	metricType := chi.URLParam(req, "type")
 	if metricType == "" {
 		return false, "type is missing in parameters", http.StatusBadRequest
 	}
-	if metricType != counter && metricType != gauge {
+	if metricType != models.Counter && metricType != models.Gauge {
 		return false, "invalid type parameter value", http.StatusBadRequest
 	}
 	metricName := chi.URLParam(req, "name")
@@ -34,23 +29,23 @@ func validate(req *http.Request, checkValue bool) (bool, string, int) {
 }
 
 func validateUpdate(metrics *models.Metrics) (bool, string, int) {
-	if metrics.MType != counter && metrics.MType != gauge {
+	if metrics.MType != models.Counter && metrics.MType != models.Gauge {
 		return false, "invalid metric type", http.StatusBadRequest
 	}
 	if metrics.ID == "" {
 		return false, "invalid id", http.StatusNotFound
 	}
-	if metrics.MType == counter && metrics.Delta == nil {
+	if metrics.MType == models.Counter && metrics.Delta == nil {
 		return false, "invalid delta", http.StatusBadRequest
 	}
-	if metrics.MType == gauge && metrics.Value == nil {
+	if metrics.MType == models.Gauge && metrics.Value == nil {
 		return false, "invalid value", http.StatusBadRequest
 	}
 	return true, "", http.StatusOK
 }
 
 func validateGet(metrics *models.Metrics) (bool, string, int) {
-	if metrics.MType != counter && metrics.MType != gauge {
+	if metrics.MType != models.Counter && metrics.MType != models.Gauge {
 		return false, "invalid metric type", http.StatusBadRequest
 	}
 	if metrics.ID == "" {

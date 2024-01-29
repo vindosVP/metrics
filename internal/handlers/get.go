@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/go-chi/chi/v5"
+	"github.com/vindosVP/metrics/internal/models"
 	"github.com/vindosVP/metrics/internal/repos"
 	"net/http"
 	"strconv"
@@ -20,7 +21,7 @@ func Get(s MetricsStorage) http.HandlerFunc {
 		metricName := chi.URLParam(req, "name")
 
 		switch metricType {
-		case counter:
+		case models.Counter:
 			cvalue, err := s.GetCounter(metricName)
 			if err != nil {
 				var status int
@@ -37,7 +38,7 @@ func Get(s MetricsStorage) http.HandlerFunc {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-		case gauge:
+		case models.Gauge:
 			gvalue, err := s.GetGauge(metricName)
 			if err != nil {
 				var status int

@@ -8,10 +8,6 @@ import (
 	"os"
 )
 
-const (
-	counter = "counter"
-)
-
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=MetricsStorage
 type MetricsStorage interface {
 	SetCounter(name string, v int64) (int64, error)
@@ -41,12 +37,12 @@ func (l *Loader) LoadMetrics() error {
 		return err
 	}
 	for _, metric := range metricsDump.Metrics {
-		if metric.MType == counter {
+		if metric.MType == models.Counter {
 			_, err := l.storage.SetCounter(metric.ID, *metric.Delta)
 			if err != nil {
 				logger.Log.Error("Failed to set counter", zap.Error(err))
 			}
-		} else {
+		} else if metric.MType == models.Gauge {
 			_, err := l.storage.UpdateGauge(metric.ID, *metric.Value)
 			if err != nil {
 				logger.Log.Error("Failed to update counter", zap.Error(err))

@@ -40,7 +40,7 @@ func GetBody(s MetricsStorage) http.HandlerFunc {
 		resp := &models.Metrics{}
 
 		switch metrics.MType {
-		case counter:
+		case models.Counter:
 			val, err := s.GetCounter(metrics.ID)
 			if err != nil {
 				var status int
@@ -56,9 +56,9 @@ func GetBody(s MetricsStorage) http.HandlerFunc {
 			}
 
 			resp.ID = metrics.ID
-			resp.MType = counter
+			resp.MType = models.Counter
 			resp.Delta = &val
-		case gauge:
+		case models.Gauge:
 			val, err := s.GetGauge(metrics.ID)
 			if err != nil {
 				var status int
@@ -74,7 +74,7 @@ func GetBody(s MetricsStorage) http.HandlerFunc {
 			}
 
 			resp.ID = metrics.ID
-			resp.MType = gauge
+			resp.MType = models.Gauge
 			resp.Value = &val
 		}
 

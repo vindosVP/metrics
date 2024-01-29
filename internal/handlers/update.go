@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/go-chi/chi/v5"
+	"github.com/vindosVP/metrics/internal/models"
 	"github.com/vindosVP/metrics/pkg/logger"
 	"go.uber.org/zap"
 	"net/http"
@@ -22,7 +23,7 @@ func Update(s MetricsStorage) http.HandlerFunc {
 		metricValue := chi.URLParam(req, "value")
 
 		switch metricType {
-		case counter:
+		case models.Counter:
 			cval, err := strconv.ParseInt(metricValue, 10, 64)
 			if err != nil {
 				http.Error(w, "invalid value type", http.StatusBadRequest)
@@ -34,7 +35,7 @@ func Update(s MetricsStorage) http.HandlerFunc {
 				return
 			}
 			logger.Log.Info("Updated metric value", zap.String("name", metricName), zap.Int64("value", cval))
-		case gauge:
+		case models.Gauge:
 			gval, err := strconv.ParseFloat(metricValue, 64)
 			if err != nil {
 				http.Error(w, "invalid value type", http.StatusBadRequest)

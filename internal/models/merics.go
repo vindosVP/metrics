@@ -1,5 +1,10 @@
 package models
 
+const (
+	Counter = "counter"
+	Gauge   = "gauge"
+)
+
 type Metrics struct {
 	ID    string   `json:"id"`
 	MType string   `json:"type"`

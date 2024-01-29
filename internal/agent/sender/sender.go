@@ -33,11 +33,6 @@ type Sender struct {
 	Client         *resty.Client
 }
 
-const (
-	counter = "counter"
-	gauge   = "gauge"
-)
-
 func New(cfg *config.AgentConfig, s MetricsStorage) *Sender {
 	return &Sender{
 		ReportInterval: cfg.ReportInterval,
@@ -83,12 +78,12 @@ func (s *Sender) sendGauges() {
 	for key, value := range m {
 		fields := []zap.Field{
 			zap.String("name", key),
-			zap.String("type", gauge),
+			zap.String("type", models.Gauge),
 			zap.Float64("value", value),
 		}
 		metric := &models.Metrics{
 			ID:    key,
-			MType: gauge,
+			MType: models.Gauge,
 			Value: &value,
 		}
 		var b bytes.Buffer
@@ -133,12 +128,12 @@ func (s *Sender) sendCounters() {
 	for key, value := range m {
 		fields := []zap.Field{
 			zap.String("name", key),
-			zap.String("type", counter),
+			zap.String("type", models.Counter),
 			zap.Int64("value", value),
 		}
 		metric := &models.Metrics{
 			ID:    key,
-			MType: counter,
+			MType: models.Counter,
 			Delta: &value,
 		}
 		var b bytes.Buffer

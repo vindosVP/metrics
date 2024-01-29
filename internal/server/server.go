@@ -2,6 +2,7 @@ package server
 
 import (
 	"github.com/go-chi/chi/v5"
+	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/vindosVP/metrics/cmd/server/config"
 	"github.com/vindosVP/metrics/internal/handlers"
 	"github.com/vindosVP/metrics/internal/middleware"
@@ -30,11 +31,12 @@ func Run(cfg *config.ServerConfig) error {
 	}
 
 	r := chi.NewRouter()
-	r.Post("/update/", middleware.WithLogging(middleware.WithCompression(handlers.UpdateBody(storage))))
-	r.Post("/value/", middleware.WithLogging(middleware.WithCompression(handlers.GetBody(storage))))
-	r.Post("/update/{type}/{name}/{value}", middleware.WithLogging(handlers.Update(storage)))
-	r.Get("/value/{type}/{name}", middleware.WithLogging(handlers.Get(storage)))
-	r.Get("/", middleware.WithLogging(middleware.WithCompression(handlers.List(storage))))
+	r.Use(chiMiddleware.Logger, middleware.Decompress, chiMiddleware.Compress(5))
+	r.Post("/update/", handlers.UpdateBody(storage))
+	r.Post("/value/", handlers.GetBody(storage))
+	r.Post("/update/{type}/{name}/{value}", handlers.Update(storage))
+	r.Get("/value/{type}/{name}", handlers.Get(storage))
+	r.Get("/", handlers.List(storage))
 	r.Handle("/assets/*", http.StripPrefix("/assets", http.FileServer(http.Dir("assets"))))
 
 	svr := saver.New(cfg.FileStoragePath, cfg.StoreInterval, storage)

@@ -22,11 +22,6 @@ type Saver struct {
 	Storage       MetricsStorage
 }
 
-const (
-	counter = "counter"
-	gauge   = "gauge"
-)
-
 func New(filename string, storeInterval time.Duration, s MetricsStorage) *Saver {
 	return &Saver{
 		FileName:      filename,
@@ -71,7 +66,7 @@ func (s *Saver) Save() {
 		val := v
 		metric := &models.Metrics{
 			ID:    k,
-			MType: gauge,
+			MType: models.Gauge,
 			Value: &val,
 		}
 		metrics[i] = metric
@@ -81,7 +76,7 @@ func (s *Saver) Save() {
 		val := v
 		metric := &models.Metrics{
 			ID:    k,
-			MType: counter,
+			MType: models.Counter,
 			Delta: &val,
 		}
 		metrics[i] = metric
