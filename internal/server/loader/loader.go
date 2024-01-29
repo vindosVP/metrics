@@ -8,11 +8,8 @@ import (
 	"os"
 )
 
-// TODO: Tests
-
 const (
 	counter = "counter"
-	gauge   = "gauge"
 )
 
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=MetricsStorage

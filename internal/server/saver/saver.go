@@ -9,8 +9,6 @@ import (
 	"time"
 )
 
-// TODO: Tests
-
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=MetricsStorage
 type MetricsStorage interface {
 	GetAllGauge() (map[string]float64, error)
