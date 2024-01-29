@@ -22,7 +22,7 @@ type tempConfig struct {
 	LogLevel        string `env:"LOG_LEVEL"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	Restore         bool
-	StoreInterval   int `env:"STORE_INTERVAL"`
+	StoreInterval   int
 }
 
 func NewServerConfig() *ServerConfig {
@@ -41,6 +41,8 @@ func NewServerConfig() *ServerConfig {
 	}
 
 	tempCfg := &tempConfig{}
+	tempCfg.Restore = flagConfig.Restore
+	tempCfg.StoreInterval = flagConfig.StoreInterval
 	envRestore, ok := os.LookupEnv("RESTORE")
 	if ok {
 		restore, err := strconv.ParseBool(envRestore)
@@ -48,8 +50,14 @@ func NewServerConfig() *ServerConfig {
 			log.Fatalf("Failed to parse env RESTORE value: %v", err)
 		}
 		tempCfg.Restore = restore
-	} else {
-		tempCfg.Restore = flagConfig.Restore
+	}
+	envStoreInterval, ok := os.LookupEnv("STORE_INTERVAL")
+	if ok {
+		storeInterval, err := strconv.Atoi(envStoreInterval)
+		if err != nil {
+			log.Fatalf("Failed to parse env STORE_INTERVAL value: %v", err)
+		}
+		tempCfg.StoreInterval = storeInterval
 	}
 
 	tempCfg.RunAddr = envConfig.RunAddr
@@ -64,9 +72,6 @@ func NewServerConfig() *ServerConfig {
 	}
 	if tempCfg.FileStoragePath == "" {
 		tempCfg.FileStoragePath = flagConfig.FileStoragePath
-	}
-	if tempCfg.StoreInterval == 0 {
-		tempCfg.StoreInterval = flagConfig.StoreInterval
 	}
 
 	return &ServerConfig{

@@ -60,6 +60,10 @@ func (s *Saver) Save() {
 		logger.Log.Error("Failed to get counter metrics", zap.Error(err))
 	}
 
+	WriteMetrics(cMetrics, gMetrics, s.FileName)
+}
+
+func WriteMetrics(cMetrics map[string]int64, gMetrics map[string]float64, fileName string) {
 	metrics := make([]*models.Metrics, len(gMetrics)+len(cMetrics))
 	i := 0
 	for k, v := range gMetrics {
@@ -90,7 +94,7 @@ func (s *Saver) Save() {
 		logger.Log.Error("Failed to marshal metrics", zap.Error(err))
 	}
 
-	err = os.WriteFile(s.FileName, data, 0666)
+	err = os.WriteFile(fileName, data, 0666)
 	if err != nil {
 		logger.Log.Error("Failed to write metrics", zap.Error(err))
 	}
