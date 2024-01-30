@@ -8,7 +8,6 @@ import (
 	"github.com/vindosVP/metrics/internal/middleware"
 	"github.com/vindosVP/metrics/internal/repos"
 	"github.com/vindosVP/metrics/internal/server/loader"
-	"github.com/vindosVP/metrics/internal/server/saver"
 	"github.com/vindosVP/metrics/internal/storage/filestorage"
 	"github.com/vindosVP/metrics/internal/storage/memstorage"
 	"github.com/vindosVP/metrics/pkg/logger"
@@ -37,7 +36,7 @@ func Run(cfg *config.ServerConfig) error {
 	if cfg.StoreInterval != time.Duration(0) {
 		storage = memstorage.New(gRepo, cRepo)
 	} else {
-		storage = filestorage.New(gRepo, cRepo, cfg.FileStoragePath)
+		storage = filestorage.NewFileStorage(gRepo, cRepo, cfg.FileStoragePath)
 	}
 
 	if cfg.Restore {
@@ -58,7 +57,7 @@ func Run(cfg *config.ServerConfig) error {
 	r.Handle("/assets/*", http.StripPrefix("/assets", http.FileServer(http.Dir("assets"))))
 
 	if cfg.StoreInterval != time.Duration(0) {
-		svr := saver.New(cfg.FileStoragePath, cfg.StoreInterval, storage)
+		svr := filestorage.NewSaver(cfg.FileStoragePath, cfg.StoreInterval, storage)
 		go svr.Run()
 		defer svr.Stop()
 	}

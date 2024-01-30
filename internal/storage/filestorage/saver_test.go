@@ -1,4 +1,4 @@
-package saver
+package filestorage
 
 import (
 	"encoding/json"
@@ -43,7 +43,7 @@ func TestSaver(t *testing.T) {
 
 	fileName := "./test_saver.json"
 	interval := time.Duration(1)
-	saver := New(fileName, interval, storage)
+	saver := NewSaver(fileName, interval, storage)
 	defer os.Remove(fileName)
 
 	done := make(chan struct{})

@@ -1,7 +1,6 @@
 package filestorage
 
 import (
-	"github.com/vindosVP/metrics/internal/server/saver"
 	"github.com/vindosVP/metrics/pkg/logger"
 	"go.uber.org/zap"
 )
@@ -21,7 +20,7 @@ type Gauge interface {
 	GetAll() (map[string]float64, error)
 }
 
-func New(gRepo Gauge, cRepo Counter, fileName string) *Storage {
+func NewFileStorage(gRepo Gauge, cRepo Counter, fileName string) *Storage {
 	return &Storage{
 		gRepo:    gRepo,
 		cRepo:    cRepo,
@@ -78,5 +77,5 @@ func (s *Storage) dump() {
 	if err != nil {
 		logger.Log.Error("Failed to get gauges", zap.Error(err))
 	}
-	saver.WriteMetrics(cMetrics, gMetrics, s.fileName)
+	WriteMetrics(cMetrics, gMetrics, s.fileName)
 }

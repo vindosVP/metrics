@@ -1,4 +1,4 @@
-package saver
+package filestorage
 
 import (
 	"encoding/json"
@@ -22,7 +22,7 @@ type Saver struct {
 	Storage       MetricsStorage
 }
 
-func New(filename string, storeInterval time.Duration, s MetricsStorage) *Saver {
+func NewSaver(filename string, storeInterval time.Duration, s MetricsStorage) *Saver {
 	return &Saver{
 		FileName:      filename,
 		StoreInterval: storeInterval,
