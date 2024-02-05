@@ -9,8 +9,7 @@ import (
 	"sync"
 )
 
-func Run() error {
-	cfg := config.NewAgentConfig()
+func Run(cfg *config.AgentConfig) error {
 
 	cRepo := repos.NewCounterRepo()
 	gRepo := repos.NewGaugeRepo()

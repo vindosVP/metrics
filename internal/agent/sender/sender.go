@@ -1,10 +1,15 @@
 package sender
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/json"
 	"fmt"
 	"github.com/go-resty/resty/v2"
 	"github.com/vindosVP/metrics/cmd/agent/config"
-	"log"
+	"github.com/vindosVP/metrics/internal/models"
+	"github.com/vindosVP/metrics/pkg/logger"
+	"go.uber.org/zap"
 	"net/http"
 	"time"
 )
@@ -56,46 +61,110 @@ func (s *Sender) SendMetrics() {
 	s.sendCounters()
 	_, err := s.Storage.SetCounter("PollCount", 0)
 	if err != nil {
-		log.Printf("Failed to set PollCount to 0: %v", err)
+		logger.Log.Error(
+			"Failed to set metric",
+			zap.String("name", "PollCount"),
+			zap.Int64("value", 0),
+			zap.Error(err))
 	}
 }
 
 func (s *Sender) sendGauges() {
 	m, err := s.Storage.GetAllGauge()
 	if err != nil {
-		log.Print("Failed to get gauge metrics")
+		logger.Log.Error("Failed to get gauge metrics", zap.Error(err))
 	}
+	url := fmt.Sprintf("http://%s/update/", s.ServerAddr)
 	for key, value := range m {
-		url := fmt.Sprintf("http://%s/update/gauge/%s/%f", s.ServerAddr, key, value)
-		resp, err := s.Client.R().Post(url)
+		fields := []zap.Field{
+			zap.String("name", key),
+			zap.String("type", models.Gauge),
+			zap.Float64("value", value),
+		}
+		metric := &models.Metrics{
+			ID:    key,
+			MType: models.Gauge,
+			Value: &value,
+		}
+		var b bytes.Buffer
+		data, err := json.Marshal(metric)
 		if err != nil {
-			log.Printf("Failed to send %s:%v", key, err)
+			fields = append(fields, zap.Error(err))
+			logger.Log.Error("Failed to marshal data", fields...)
+			continue
+		}
+		cw := gzip.NewWriter(&b)
+		_, err = cw.Write(data)
+		if err != nil {
+			fields = append(fields, zap.Error(err))
+			logger.Log.Error("Failed to compress data", fields...)
+			continue
+		}
+		cw.Close()
+		resp, err := s.Client.R().
+			SetHeader("Content-Encoding", "gzip").
+			SetBody(&b).
+			Post(url)
+		if err != nil {
+			fields = append(fields, zap.Error(err))
+			logger.Log.Error("Failed to send metric", fields...)
 			continue
 		}
 		if resp.StatusCode() != http.StatusOK {
-			log.Printf("Failed to send %s: resp code: %d, data %s", key, resp.StatusCode(), string(resp.Body()))
+			fields = append(fields, zap.Int("code", resp.StatusCode()))
+			logger.Log.Error("Failed to send metric", fields...)
 			continue
 		}
-		log.Printf("Metric %s sent sucessfully", key)
+		logger.Log.Info("Metric sent successfully", fields...)
 	}
 }
 
 func (s *Sender) sendCounters() {
 	m, err := s.Storage.GetAllCounter()
 	if err != nil {
-		log.Print("Failed to get counter metrics")
+		logger.Log.Error("Failed to get counter metrics", zap.Error(err))
 	}
+	url := fmt.Sprintf("http://%s/update/", s.ServerAddr)
 	for key, value := range m {
-		url := fmt.Sprintf("http://%s/update/counter/%s/%d", s.ServerAddr, key, value)
-		resp, err := s.Client.R().Post(url)
+		fields := []zap.Field{
+			zap.String("name", key),
+			zap.String("type", models.Counter),
+			zap.Int64("value", value),
+		}
+		metric := &models.Metrics{
+			ID:    key,
+			MType: models.Counter,
+			Delta: &value,
+		}
+		var b bytes.Buffer
+		data, err := json.Marshal(metric)
 		if err != nil {
-			log.Printf("Failed to send %s:%v", key, err)
+			fields = append(fields, zap.Error(err))
+			logger.Log.Error("Failed to marshal data", fields...)
+			continue
+		}
+		cw := gzip.NewWriter(&b)
+		_, err = cw.Write(data)
+		if err != nil {
+			fields = append(fields, zap.Error(err))
+			logger.Log.Error("Failed to compress data", fields...)
+			continue
+		}
+		cw.Close()
+		resp, err := s.Client.R().
+			SetHeader("Content-Encoding", "gzip").
+			SetBody(&b).
+			Post(url)
+		if err != nil {
+			fields = append(fields, zap.Error(err))
+			logger.Log.Error("Failed to send metric", fields...)
 			continue
 		}
 		if resp.StatusCode() != http.StatusOK {
-			log.Printf("Failed to send %s: resp code: %d, data %s", key, resp.StatusCode(), string(resp.Body()))
+			fields = append(fields, zap.Int("code", resp.StatusCode()))
+			logger.Log.Error("Failed to send metric", fields...)
 			continue
 		}
-		log.Printf("Metric %s sent sucessfully", key)
+		logger.Log.Info("Metric sent successfully", fields...)
 	}
 }

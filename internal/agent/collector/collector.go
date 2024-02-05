@@ -2,7 +2,8 @@ package collector
 
 import (
 	"github.com/vindosVP/metrics/cmd/agent/config"
-	"log"
+	"github.com/vindosVP/metrics/pkg/logger"
+	"go.uber.org/zap"
 	"math/rand"
 	"runtime"
 	"time"
@@ -49,13 +50,17 @@ func (c *Collector) Run() {
 func (c *Collector) CollectMetrics() {
 	c.collectCounters()
 	c.collectGauges()
-	log.Print("Metrics collected")
+	logger.Log.Info("Metrics collected")
 }
 
 func (c *Collector) collectCounters() {
 	_, err := c.Storage.UpdateCounter("PollCount", 1)
 	if err != nil {
-		log.Printf("Failed to update counter PollCount: %v", err)
+		logger.Log.Error(
+			"Failed to update metric",
+			zap.String("name", "PollCount"),
+			zap.Int64("value", 1),
+			zap.Error(err))
 	}
 }
 
@@ -66,7 +71,11 @@ func (c *Collector) collectGauges() {
 	for key, val := range m {
 		_, err := c.Storage.UpdateGauge(key, val)
 		if err != nil {
-			log.Printf("Failed to gauge %s: %v", key, err)
+			logger.Log.Error(
+				"Failed to update metric",
+				zap.String("name", key),
+				zap.Float64("value", val),
+				zap.Error(err))
 		}
 	}
 }
@@ -87,6 +96,8 @@ func toMap(stats *runtime.MemStats) map[string]float64 {
 		"LastGC":        float64(stats.LastGC),
 		"Lookups":       float64(stats.Lookups),
 		"MCacheSys":     float64(stats.MCacheSys),
+		"MCacheInuse":   float64(stats.MCacheInuse),
+		"NextGC":        float64(stats.NextGC),
 		"MSpanInuse":    float64(stats.MSpanInuse),
 		"MSpanSys":      float64(stats.MSpanSys),
 		"Mallocs":       float64(stats.Mallocs),

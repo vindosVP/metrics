@@ -177,7 +177,7 @@ func Test_gaugeMetricLines(t *testing.T) {
 				"Alloc": 323423452.555,
 				"Test":  1,
 			},
-			want: []string{"<tr><td>Alloc</td><td>323423452.555000</td></tr>", "<tr><td>Test</td><td>1.000000</td></tr>"},
+			want: []string{"<tr><td>Alloc</td><td>323423452.56</td></tr>", "<tr><td>Test</td><td>1.00</td></tr>"},
 		},
 		{
 			name:    "empty",

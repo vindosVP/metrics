@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 )
 
@@ -51,34 +52,41 @@ func List(s MetricsStorage) http.HandlerFunc {
 
 		html := strings.Replace(htmlTemplate, "%metrics%", strings.Join(metricLines, ""), -1)
 
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, err = w.Write([]byte(html))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 	}
 }
 
 func counterMetricLines(metrics map[string]int64) []string {
-	lines := make([]string, len(metrics))
-	index := 0
-	for key, val := range metrics {
-		line := fmt.Sprintf("<tr><td>%s</td><td>%d</td></tr>", key, val)
-		lines[index] = line
-		index++
+	lines := make([]string, 0, len(metrics))
+	keys := make([]string, 0, len(metrics))
+	for k := range metrics {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		line := fmt.Sprintf("<tr><td>%s</td><td>%d</td></tr>", key, metrics[key])
+		lines = append(lines, line)
 	}
 	return lines
 }
 
 func gaugeMetricLines(metrics map[string]float64) []string {
-	lines := make([]string, len(metrics))
-	index := 0
-	for key, val := range metrics {
-		line := fmt.Sprintf("<tr><td>%s</td><td>%f</td></tr>", key, val)
-		lines[index] = line
-		index++
+	lines := make([]string, 0, len(metrics))
+	keys := make([]string, 0, len(metrics))
+	for k := range metrics {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		line := fmt.Sprintf("<tr><td>%s</td><td>%.2f</td></tr>", key, metrics[key])
+		lines = append(lines, line)
 	}
 	return lines
 }

@@ -49,8 +49,8 @@ func (c *CounterRepo) GetAll() (map[string]int64, error) {
 }
 
 func (c *CounterRepo) Set(name string, v int64) (int64, error) {
-	//c.Lock()
+	c.Lock()
 	c.metrics[name] = v
-	//c.Unlock()
+	c.Unlock()
 	return c.metrics[name], nil
 }
