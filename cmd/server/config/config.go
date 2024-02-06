@@ -15,6 +15,7 @@ type ServerConfig struct {
 	FileStoragePath string
 	Restore         bool
 	StoreInterval   time.Duration
+	DatabaseDNS     string
 }
 
 type tempConfig struct {
@@ -23,6 +24,7 @@ type tempConfig struct {
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	Restore         bool
 	StoreInterval   int
+	DatabaseDNS     string `env:"DATABASE_DSN"`
 }
 
 func NewServerConfig() *ServerConfig {
@@ -33,6 +35,7 @@ func NewServerConfig() *ServerConfig {
 	flag.StringVar(&flagConfig.FileStoragePath, "f", "./tmp/metrics-db.json", "file storage path")
 	flag.IntVar(&flagConfig.StoreInterval, "i", 300, "store interval")
 	flag.BoolVar(&flagConfig.Restore, "r", true, "restore from dump file")
+	flag.StringVar(&flagConfig.DatabaseDNS, "d", "postgres://postgres:postgres@localhost:5432/metrics?sslmode=disable", "database dns")
 	flag.Parse()
 
 	envConfig := &tempConfig{}
@@ -64,6 +67,10 @@ func NewServerConfig() *ServerConfig {
 	tempCfg.LogLevel = envConfig.LogLevel
 	tempCfg.StoreInterval = envConfig.StoreInterval
 	tempCfg.FileStoragePath = envConfig.FileStoragePath
+	tempCfg.DatabaseDNS = envConfig.DatabaseDNS
+	if tempCfg.DatabaseDNS == "" {
+		tempCfg.DatabaseDNS = flagConfig.DatabaseDNS
+	}
 	if tempCfg.RunAddr == "" {
 		tempCfg.RunAddr = flagConfig.RunAddr
 	}
@@ -80,5 +87,6 @@ func NewServerConfig() *ServerConfig {
 		FileStoragePath: tempCfg.FileStoragePath,
 		Restore:         tempCfg.Restore,
 		StoreInterval:   time.Duration(tempCfg.StoreInterval),
+		DatabaseDNS:     tempCfg.DatabaseDNS,
 	}
 }

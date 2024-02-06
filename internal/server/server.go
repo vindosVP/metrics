@@ -1,8 +1,10 @@
 package server
 
 import (
+	"database/sql"
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
+	_ "github.com/lib/pq"
 	"github.com/vindosVP/metrics/cmd/server/config"
 	"github.com/vindosVP/metrics/internal/handlers"
 	"github.com/vindosVP/metrics/internal/middleware"
@@ -47,6 +49,13 @@ func Run(cfg *config.ServerConfig) error {
 		}
 	}
 
+	db, err := sql.Open("postgres", cfg.DatabaseDNS)
+
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
 	r := chi.NewRouter()
 	r.Use(chiMiddleware.Logger, middleware.Decompress, chiMiddleware.Compress(5))
 	r.Post("/update/", handlers.UpdateBody(storage))
@@ -54,6 +63,7 @@ func Run(cfg *config.ServerConfig) error {
 	r.Post("/update/{type}/{name}/{value}", handlers.Update(storage))
 	r.Get("/value/{type}/{name}", handlers.Get(storage))
 	r.Get("/", handlers.List(storage))
+	r.Get("/ping", handlers.Ping(db))
 	r.Handle("/assets/*", http.StripPrefix("/assets", http.FileServer(http.Dir("assets"))))
 
 	if cfg.StoreInterval != time.Duration(0) {
@@ -63,7 +73,7 @@ func Run(cfg *config.ServerConfig) error {
 	}
 
 	log.Printf("Running server on %s", cfg.RunAddr)
-	err := http.ListenAndServe(cfg.RunAddr, r)
+	err = http.ListenAndServe(cfg.RunAddr, r)
 	if err != nil {
 		return err
 	}
