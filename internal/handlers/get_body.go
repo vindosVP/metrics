@@ -41,7 +41,7 @@ func GetBody(s MetricsStorage) http.HandlerFunc {
 
 		switch metrics.MType {
 		case models.Counter:
-			val, err := s.GetCounter(metrics.ID)
+			val, err := s.GetCounter(req.Context(), metrics.ID)
 			if err != nil {
 				var status int
 				if err == repos.ErrMetricNotRegistered {
@@ -59,7 +59,7 @@ func GetBody(s MetricsStorage) http.HandlerFunc {
 			resp.MType = models.Counter
 			resp.Delta = &val
 		case models.Gauge:
-			val, err := s.GetGauge(metrics.ID)
+			val, err := s.GetGauge(req.Context(), metrics.ID)
 			if err != nil {
 				var status int
 				if err == repos.ErrMetricNotRegistered {

@@ -1,6 +1,7 @@
 package repos
 
 import (
+	"context"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -51,7 +52,7 @@ func TestGaugeRepo_Update(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &GaugeRepo{metrics: tt.existingMetrics}
-			val, err := repo.Update(tt.metricName, tt.metricValue)
+			val, err := repo.Update(context.Background(), tt.metricName, tt.metricValue)
 			assert.Equal(t, tt.wantValue, val)
 			assert.Equal(t, repo.metrics[tt.metricName], tt.wantValue)
 			if tt.wantErr {
@@ -93,7 +94,7 @@ func TestGaugeRepo_Get(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &GaugeRepo{metrics: tt.existingMetrics}
-			val, err := repo.Get(tt.metricName)
+			val, err := repo.Get(context.Background(), tt.metricName)
 			if tt.wantErr {
 				assert.ErrorIs(t, err, tt.errValue)
 			} else {
@@ -131,7 +132,7 @@ func TestGaugeRepo_GetAll(t *testing.T) {
 			g := GaugeRepo{
 				metrics: tt.metrics,
 			}
-			got, err := g.GetAll()
+			got, err := g.GetAll(context.Background())
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})

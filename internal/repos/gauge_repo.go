@@ -1,6 +1,9 @@
 package repos
 
-import "sync"
+import (
+	"context"
+	"sync"
+)
 
 type GaugeRepo struct {
 	metrics map[string]float64
@@ -11,7 +14,7 @@ func NewGaugeRepo() *GaugeRepo {
 	return &GaugeRepo{metrics: make(map[string]float64)}
 }
 
-func (g *GaugeRepo) Update(name string, v float64) (float64, error) {
+func (g *GaugeRepo) Update(ctx context.Context, name string, v float64) (float64, error) {
 	g.Lock()
 	g.metrics[name] = v
 	cVal := g.metrics[name]
@@ -19,7 +22,7 @@ func (g *GaugeRepo) Update(name string, v float64) (float64, error) {
 	return cVal, nil
 }
 
-func (g *GaugeRepo) Get(name string) (float64, error) {
+func (g *GaugeRepo) Get(ctx context.Context, name string) (float64, error) {
 	g.Lock()
 	v, ok := g.metrics[name]
 	if !ok {
@@ -30,7 +33,7 @@ func (g *GaugeRepo) Get(name string) (float64, error) {
 	return v, nil
 }
 
-func (g *GaugeRepo) GetAll() (map[string]float64, error) {
+func (g *GaugeRepo) GetAll(ctx context.Context) (map[string]float64, error) {
 	g.Lock()
 	metrics := make(map[string]float64, len(g.metrics))
 	for key, val := range g.metrics {

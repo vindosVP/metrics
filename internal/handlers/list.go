@@ -33,12 +33,12 @@ const htmlTemplate = `
 func List(s MetricsStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 
-		counterMetrics, err := s.GetAllCounter()
+		counterMetrics, err := s.GetAllCounter(req.Context())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		gaugeMetrics, err := s.GetAllGauge()
+		gaugeMetrics, err := s.GetAllGauge(req.Context())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

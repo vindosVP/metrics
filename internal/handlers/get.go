@@ -22,7 +22,7 @@ func Get(s MetricsStorage) http.HandlerFunc {
 
 		switch metricType {
 		case models.Counter:
-			cvalue, err := s.GetCounter(metricName)
+			cvalue, err := s.GetCounter(req.Context(), metricName)
 			if err != nil {
 				var status int
 				if err == repos.ErrMetricNotRegistered {
@@ -39,7 +39,7 @@ func Get(s MetricsStorage) http.HandlerFunc {
 				return
 			}
 		case models.Gauge:
-			gvalue, err := s.GetGauge(metricName)
+			gvalue, err := s.GetGauge(req.Context(), metricName)
 			if err != nil {
 				var status int
 				if err == repos.ErrMetricNotRegistered {

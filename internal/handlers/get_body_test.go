@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/vindosVP/metrics/internal/handlers/mocks"
 	"github.com/vindosVP/metrics/internal/repos"
@@ -224,10 +225,10 @@ func TestGetBody(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockStorage := mocks.NewMetricsStorage(t)
 			if tt.mockGauge.needed {
-				mockStorage.On("GetGauge", tt.mockGauge.name).Return(tt.mockGauge.value, tt.mockGauge.err)
+				mockStorage.On("GetGauge", mock.Anything, tt.mockGauge.name).Return(tt.mockGauge.value, tt.mockGauge.err)
 			}
 			if tt.mockCounter.needed {
-				mockStorage.On("GetCounter", tt.mockCounter.name).Return(tt.mockCounter.value, tt.mockCounter.err)
+				mockStorage.On("GetCounter", mock.Anything, tt.mockCounter.name).Return(tt.mockCounter.value, tt.mockCounter.err)
 			}
 
 			r := chi.NewRouter()

@@ -1,6 +1,7 @@
 package filestorage
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/vindosVP/metrics/internal/models"
 	"github.com/vindosVP/metrics/pkg/logger"
@@ -11,8 +12,8 @@ import (
 
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=MetricsStorage
 type MetricsStorage interface {
-	GetAllGauge() (map[string]float64, error)
-	GetAllCounter() (map[string]int64, error)
+	GetAllGauge(ctx context.Context) (map[string]float64, error)
+	GetAllCounter(ctx context.Context) (map[string]int64, error)
 }
 
 type Saver struct {
@@ -51,11 +52,12 @@ func (s *Saver) Run() {
 }
 
 func (s *Saver) Save() {
-	gMetrics, err := s.Storage.GetAllGauge()
+	ctx := context.Background()
+	gMetrics, err := s.Storage.GetAllGauge(ctx)
 	if err != nil {
 		logger.Log.Error("Failed to get gauge metrics", zap.Error(err))
 	}
-	cMetrics, err := s.Storage.GetAllCounter()
+	cMetrics, err := s.Storage.GetAllCounter(ctx)
 	if err != nil {
 		logger.Log.Error("Failed to get counter metrics", zap.Error(err))
 	}

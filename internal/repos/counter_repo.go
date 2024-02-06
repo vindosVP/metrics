@@ -1,6 +1,9 @@
 package repos
 
-import "sync"
+import (
+	"context"
+	"sync"
+)
 
 type CounterRepo struct {
 	metrics map[string]int64
@@ -11,7 +14,7 @@ func NewCounterRepo() *CounterRepo {
 	return &CounterRepo{metrics: make(map[string]int64)}
 }
 
-func (c *CounterRepo) Update(name string, v int64) (int64, error) {
+func (c *CounterRepo) Update(ctx context.Context, name string, v int64) (int64, error) {
 	c.Lock()
 	currentV, ok := c.metrics[name]
 
@@ -27,7 +30,7 @@ func (c *CounterRepo) Update(name string, v int64) (int64, error) {
 
 }
 
-func (c *CounterRepo) Get(name string) (int64, error) {
+func (c *CounterRepo) Get(ctx context.Context, name string) (int64, error) {
 	c.Lock()
 	v, ok := c.metrics[name]
 	if !ok {
@@ -38,7 +41,7 @@ func (c *CounterRepo) Get(name string) (int64, error) {
 	return v, nil
 }
 
-func (c *CounterRepo) GetAll() (map[string]int64, error) {
+func (c *CounterRepo) GetAll(ctx context.Context) (map[string]int64, error) {
 	c.Lock()
 	metrics := make(map[string]int64, len(c.metrics))
 	for key, val := range c.metrics {
@@ -48,7 +51,7 @@ func (c *CounterRepo) GetAll() (map[string]int64, error) {
 	return metrics, nil
 }
 
-func (c *CounterRepo) Set(name string, v int64) (int64, error) {
+func (c *CounterRepo) Set(ctx context.Context, name string, v int64) (int64, error) {
 	c.Lock()
 	c.metrics[name] = v
 	c.Unlock()

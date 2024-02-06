@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"github.com/vindosVP/metrics/internal/models"
 	"github.com/vindosVP/metrics/pkg/logger"
@@ -11,13 +12,13 @@ import (
 
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=MetricsStorage
 type MetricsStorage interface {
-	UpdateGauge(name string, v float64) (float64, error)
-	UpdateCounter(name string, v int64) (int64, error)
-	SetCounter(name string, v int64) (int64, error)
-	GetGauge(name string) (float64, error)
-	GetAllGauge() (map[string]float64, error)
-	GetCounter(name string) (int64, error)
-	GetAllCounter() (map[string]int64, error)
+	UpdateGauge(ctx context.Context, name string, v float64) (float64, error)
+	UpdateCounter(ctx context.Context, name string, v int64) (int64, error)
+	SetCounter(ctx context.Context, name string, v int64) (int64, error)
+	GetGauge(ctx context.Context, name string) (float64, error)
+	GetAllGauge(ctx context.Context) (map[string]float64, error)
+	GetCounter(ctx context.Context, name string) (int64, error)
+	GetAllCounter(ctx context.Context) (map[string]int64, error)
 }
 
 func UpdateBody(s MetricsStorage) http.HandlerFunc {
@@ -53,7 +54,7 @@ func UpdateBody(s MetricsStorage) http.HandlerFunc {
 		case models.Counter:
 			delta := *metrics.Delta
 			fields = append(fields, zap.Int64("delta", delta))
-			val, err := s.UpdateCounter(metrics.ID, delta)
+			val, err := s.UpdateCounter(req.Context(), metrics.ID, delta)
 			if err != nil {
 				fields = append(fields, zap.Error(err))
 				logger.Log.Error("Failed to update metric value", fields...)
@@ -69,7 +70,7 @@ func UpdateBody(s MetricsStorage) http.HandlerFunc {
 		case models.Gauge:
 			value := *metrics.Value
 			fields = append(fields, zap.Float64("value", value))
-			val, err := s.UpdateGauge(metrics.ID, value)
+			val, err := s.UpdateGauge(req.Context(), metrics.ID, value)
 			if err != nil {
 				fields = append(fields, zap.Error(err))
 				logger.Log.Error("Failed to update metric value", fields...)

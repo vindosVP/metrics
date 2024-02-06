@@ -3,6 +3,7 @@ package sender
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/go-resty/resty/v2"
@@ -16,13 +17,13 @@ import (
 
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=MetricsStorage
 type MetricsStorage interface {
-	UpdateGauge(name string, v float64) (float64, error)
-	UpdateCounter(name string, v int64) (int64, error)
-	SetCounter(name string, v int64) (int64, error)
-	GetGauge(name string) (float64, error)
-	GetAllGauge() (map[string]float64, error)
-	GetCounter(name string) (int64, error)
-	GetAllCounter() (map[string]int64, error)
+	UpdateGauge(ctx context.Context, name string, v float64) (float64, error)
+	UpdateCounter(ctx context.Context, name string, v int64) (int64, error)
+	SetCounter(ctx context.Context, name string, v int64) (int64, error)
+	GetGauge(ctx context.Context, name string) (float64, error)
+	GetAllGauge(ctx context.Context) (map[string]float64, error)
+	GetCounter(ctx context.Context, name string) (int64, error)
+	GetAllCounter(ctx context.Context) (map[string]int64, error)
 }
 
 type Sender struct {
@@ -59,7 +60,8 @@ func (s *Sender) Run() {
 func (s *Sender) SendMetrics() {
 	s.sendGauges()
 	s.sendCounters()
-	_, err := s.Storage.SetCounter("PollCount", 0)
+	ctx := context.Background()
+	_, err := s.Storage.SetCounter(ctx, "PollCount", 0)
 	if err != nil {
 		logger.Log.Error(
 			"Failed to set metric",
@@ -70,7 +72,8 @@ func (s *Sender) SendMetrics() {
 }
 
 func (s *Sender) sendGauges() {
-	m, err := s.Storage.GetAllGauge()
+	ctx := context.Background()
+	m, err := s.Storage.GetAllGauge(ctx)
 	if err != nil {
 		logger.Log.Error("Failed to get gauge metrics", zap.Error(err))
 	}
@@ -120,7 +123,8 @@ func (s *Sender) sendGauges() {
 }
 
 func (s *Sender) sendCounters() {
-	m, err := s.Storage.GetAllCounter()
+	ctx := context.Background()
+	m, err := s.Storage.GetAllCounter(ctx)
 	if err != nil {
 		logger.Log.Error("Failed to get counter metrics", zap.Error(err))
 	}

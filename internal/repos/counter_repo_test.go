@@ -1,6 +1,7 @@
 package repos
 
 import (
+	"context"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -60,7 +61,7 @@ func TestCounterRepo_Update(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &CounterRepo{metrics: tt.existingMetrics}
-			val, err := repo.Update(tt.metricName, tt.metricValue)
+			val, err := repo.Update(context.Background(), tt.metricName, tt.metricValue)
 			if tt.wantErr {
 				assert.ErrorIs(t, err, tt.errValue)
 			} else {
@@ -127,7 +128,7 @@ func TestCounterRepo_Set(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &CounterRepo{metrics: tt.existingMetrics}
-			val, err := repo.Set(tt.metricName, tt.metricValue)
+			val, err := repo.Set(context.Background(), tt.metricName, tt.metricValue)
 			if tt.wantErr {
 				assert.ErrorIs(t, err, tt.errValue)
 			} else {
@@ -169,7 +170,7 @@ func TestCounterRepo_Get(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &CounterRepo{metrics: tt.existingMetrics}
-			val, err := repo.Get(tt.metricName)
+			val, err := repo.Get(context.Background(), tt.metricName)
 			if tt.wantErr {
 				assert.ErrorIs(t, err, tt.errValue)
 			} else {
@@ -207,7 +208,7 @@ func TestCounterRepo_GetAll(t *testing.T) {
 			c := CounterRepo{
 				metrics: tt.metrics,
 			}
-			got, err := c.GetAll()
+			got, err := c.GetAll(context.Background())
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})
