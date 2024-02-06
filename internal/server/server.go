@@ -8,7 +8,7 @@ import (
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	_ "github.com/lib/pq"
 	"github.com/vindosVP/metrics/cmd/server/config"
-	"github.com/vindosVP/metrics/internal/db_repos"
+	"github.com/vindosVP/metrics/internal/dbrepos"
 	"github.com/vindosVP/metrics/internal/handlers"
 	"github.com/vindosVP/metrics/internal/middleware"
 	"github.com/vindosVP/metrics/internal/repos"
@@ -78,8 +78,8 @@ func setupDBServer(db *sql.DB) (*chi.Mux, error) {
 	}
 	logger.Log.Info("Created successfully")
 
-	cRepo := db_repos.NewCounterRepo(db)
-	gRepo := db_repos.NewGaugeRepo(db)
+	cRepo := dbrepos.NewCounterRepo(db)
+	gRepo := dbrepos.NewGaugeRepo(db)
 	storage := dbstorage.New(cRepo, gRepo)
 
 	r := chi.NewRouter()

@@ -35,7 +35,7 @@ func NewServerConfig() *ServerConfig {
 	flag.StringVar(&flagConfig.FileStoragePath, "f", "./tmp/metrics-db.json", "file storage path")
 	flag.IntVar(&flagConfig.StoreInterval, "i", 300, "store interval")
 	flag.BoolVar(&flagConfig.Restore, "r", true, "restore from dump file")
-	flag.StringVar(&flagConfig.DatabaseDNS, "d", "postgres://postgres:postgres@localhost:5432/metrics?sslmode=disable", "database dns")
+	flag.StringVar(&flagConfig.DatabaseDNS, "d", "", "database dns")
 	flag.Parse()
 
 	envConfig := &tempConfig{}
