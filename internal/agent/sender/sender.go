@@ -58,10 +58,19 @@ func (s *Sender) Run() {
 }
 
 func (s *Sender) SendMetrics() {
-	s.sendGauges()
-	s.sendCounters()
 	ctx := context.Background()
-	_, err := s.Storage.SetCounter(ctx, "PollCount", 0)
+	g, err := s.Storage.GetAllGauge(ctx)
+	if err != nil {
+		logger.Log.Error("Failed to get gauge metrics", zap.Error(err))
+	}
+	c, err := s.Storage.GetAllCounter(ctx)
+	if err != nil {
+		logger.Log.Error("Failed to get counter metrics", zap.Error(err))
+	}
+
+	s.send(c, g)
+
+	_, err = s.Storage.SetCounter(ctx, "PollCount", 0)
 	if err != nil {
 		logger.Log.Error(
 			"Failed to set metric",
@@ -71,104 +80,68 @@ func (s *Sender) SendMetrics() {
 	}
 }
 
-func (s *Sender) sendGauges() {
-	ctx := context.Background()
-	m, err := s.Storage.GetAllGauge(ctx)
+func (s *Sender) send(c map[string]int64, g map[string]float64) {
+	if len(c)+len(g) == 0 {
+		return
+	}
+
+	batch := makeButch(c, g)
+
+	var b bytes.Buffer
+	data, err := json.Marshal(batch)
 	if err != nil {
-		logger.Log.Error("Failed to get gauge metrics", zap.Error(err))
+		logger.Log.Error("Failed to marshal data", zap.Error(err))
+		return
 	}
-	url := fmt.Sprintf("http://%s/update/", s.ServerAddr)
-	for key, value := range m {
-		fields := []zap.Field{
-			zap.String("name", key),
-			zap.String("type", models.Gauge),
-			zap.Float64("value", value),
-		}
-		metric := &models.Metrics{
-			ID:    key,
-			MType: models.Gauge,
-			Value: &value,
-		}
-		var b bytes.Buffer
-		data, err := json.Marshal(metric)
-		if err != nil {
-			fields = append(fields, zap.Error(err))
-			logger.Log.Error("Failed to marshal data", fields...)
-			continue
-		}
-		cw := gzip.NewWriter(&b)
-		_, err = cw.Write(data)
-		if err != nil {
-			fields = append(fields, zap.Error(err))
-			logger.Log.Error("Failed to compress data", fields...)
-			continue
-		}
-		cw.Close()
-		resp, err := s.Client.R().
-			SetHeader("Content-Encoding", "gzip").
-			SetBody(&b).
-			Post(url)
-		if err != nil {
-			fields = append(fields, zap.Error(err))
-			logger.Log.Error("Failed to send metric", fields...)
-			continue
-		}
-		if resp.StatusCode() != http.StatusOK {
-			fields = append(fields, zap.Int("code", resp.StatusCode()))
-			logger.Log.Error("Failed to send metric", fields...)
-			continue
-		}
-		logger.Log.Info("Metric sent successfully", fields...)
+
+	cw := gzip.NewWriter(&b)
+	_, err = cw.Write(data)
+	if err != nil {
+		logger.Log.Error("Failed to compress data", zap.Error(err))
+		return
 	}
+	cw.Close()
+
+	url := fmt.Sprintf("http://%s/updates/", s.ServerAddr)
+	resp, err := s.Client.R().
+		SetHeader("Content-Encoding", "gzip").
+		SetBody(&b).
+		Post(url)
+
+	if err != nil {
+		logger.Log.Error("Failed to send metrics", zap.Error(err))
+		return
+	}
+	if resp.StatusCode() != http.StatusOK {
+		logger.Log.Error("Failed to send metrics", zap.Int("code", resp.StatusCode()))
+		return
+	}
+	logger.Log.Info("Metric sent successfully")
 }
 
-func (s *Sender) sendCounters() {
-	ctx := context.Background()
-	m, err := s.Storage.GetAllCounter(ctx)
-	if err != nil {
-		logger.Log.Error("Failed to get counter metrics", zap.Error(err))
-	}
-	url := fmt.Sprintf("http://%s/update/", s.ServerAddr)
-	for key, value := range m {
-		fields := []zap.Field{
-			zap.String("name", key),
-			zap.String("type", models.Counter),
-			zap.Int64("value", value),
-		}
+func makeButch(c map[string]int64, g map[string]float64) []*models.Metrics {
+	batch := make([]*models.Metrics, len(c)+len(g))
+
+	i := 0
+	for k, v := range g {
 		metric := &models.Metrics{
-			ID:    key,
-			MType: models.Counter,
-			Delta: &value,
+			ID:    k,
+			MType: models.Gauge,
+			Value: &v,
 		}
-		var b bytes.Buffer
-		data, err := json.Marshal(metric)
-		if err != nil {
-			fields = append(fields, zap.Error(err))
-			logger.Log.Error("Failed to marshal data", fields...)
-			continue
-		}
-		cw := gzip.NewWriter(&b)
-		_, err = cw.Write(data)
-		if err != nil {
-			fields = append(fields, zap.Error(err))
-			logger.Log.Error("Failed to compress data", fields...)
-			continue
-		}
-		cw.Close()
-		resp, err := s.Client.R().
-			SetHeader("Content-Encoding", "gzip").
-			SetBody(&b).
-			Post(url)
-		if err != nil {
-			fields = append(fields, zap.Error(err))
-			logger.Log.Error("Failed to send metric", fields...)
-			continue
-		}
-		if resp.StatusCode() != http.StatusOK {
-			fields = append(fields, zap.Int("code", resp.StatusCode()))
-			logger.Log.Error("Failed to send metric", fields...)
-			continue
-		}
-		logger.Log.Info("Metric sent successfully", fields...)
+		batch[i] = metric
+		i++
 	}
+
+	for k, v := range c {
+		metric := &models.Metrics{
+			ID:    k,
+			MType: models.Counter,
+			Delta: &v,
+		}
+		batch[i] = metric
+		i++
+	}
+
+	return batch
 }

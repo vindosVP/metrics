@@ -19,6 +19,7 @@ type MetricsStorage interface {
 	GetAllGauge(ctx context.Context) (map[string]float64, error)
 	GetCounter(ctx context.Context, name string) (int64, error)
 	GetAllCounter(ctx context.Context) (map[string]int64, error)
+	InsertBatch(ctx context.Context, batch []*models.Metrics) error
 }
 
 func UpdateBody(s MetricsStorage) http.HandlerFunc {

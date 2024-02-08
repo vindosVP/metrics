@@ -2,6 +2,7 @@ package filestorage
 
 import (
 	"context"
+	"github.com/vindosVP/metrics/internal/models"
 	"github.com/vindosVP/metrics/pkg/logger"
 	"go.uber.org/zap"
 )
@@ -33,6 +34,27 @@ type Storage struct {
 	gRepo    Gauge
 	cRepo    Counter
 	fileName string
+}
+
+func (s *Storage) InsertBatch(ctx context.Context, batch []*models.Metrics) error {
+	for _, metric := range batch {
+		switch metric.MType {
+		case models.Counter:
+			val := *metric.Delta
+			_, err := s.cRepo.Update(ctx, metric.ID, val)
+			if err != nil {
+				return err
+			}
+		case models.Gauge:
+			val := *metric.Value
+			_, err := s.gRepo.Update(ctx, metric.ID, val)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	s.dump(ctx)
+	return nil
 }
 
 func (s *Storage) UpdateGauge(ctx context.Context, name string, v float64) (float64, error) {

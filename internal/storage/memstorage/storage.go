@@ -1,6 +1,9 @@
 package memstorage
 
-import "context"
+import (
+	"context"
+	"github.com/vindosVP/metrics/internal/models"
+)
 
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=Counter
 type Counter interface {
@@ -27,6 +30,26 @@ func New(gRepo Gauge, cRepo Counter) *Storage {
 		gRepo: gRepo,
 		cRepo: cRepo,
 	}
+}
+
+func (s *Storage) InsertBatch(ctx context.Context, batch []*models.Metrics) error {
+	for _, metric := range batch {
+		switch metric.MType {
+		case models.Counter:
+			val := *metric.Delta
+			_, err := s.cRepo.Update(ctx, metric.ID, val)
+			if err != nil {
+				return err
+			}
+		case models.Gauge:
+			val := *metric.Value
+			_, err := s.gRepo.Update(ctx, metric.ID, val)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (s *Storage) UpdateGauge(ctx context.Context, name string, v float64) (float64, error) {

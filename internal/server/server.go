@@ -11,6 +11,7 @@ import (
 	"github.com/vindosVP/metrics/internal/dbrepos"
 	"github.com/vindosVP/metrics/internal/handlers"
 	"github.com/vindosVP/metrics/internal/middleware"
+	"github.com/vindosVP/metrics/internal/models"
 	"github.com/vindosVP/metrics/internal/repos"
 	"github.com/vindosVP/metrics/internal/server/loader"
 	"github.com/vindosVP/metrics/internal/storage/dbstorage"
@@ -31,6 +32,7 @@ type MetricsStorage interface {
 	GetAllGauge(ctx context.Context) (map[string]float64, error)
 	GetCounter(ctx context.Context, name string) (int64, error)
 	GetAllCounter(ctx context.Context) (map[string]int64, error)
+	InsertBatch(ctx context.Context, batch []*models.Metrics) error
 }
 
 func Run(cfg *config.ServerConfig) error {
@@ -80,12 +82,13 @@ func setupDBServer(db *sql.DB) (*chi.Mux, error) {
 
 	cRepo := dbrepos.NewCounterRepo(db)
 	gRepo := dbrepos.NewGaugeRepo(db)
-	storage := dbstorage.New(cRepo, gRepo)
+	storage := dbstorage.New(cRepo, gRepo, db)
 
 	r := chi.NewRouter()
 	r.Use(chiMiddleware.Logger, middleware.Decompress, chiMiddleware.Compress(5))
 	r.Get("/ping", handlers.Ping(db))
 	r.Post("/update/", handlers.UpdateBody(storage))
+	r.Post("/updates/", handlers.UpdateBatch(storage))
 	r.Post("/value/", handlers.GetBody(storage))
 	r.Post("/update/{type}/{name}/{value}", handlers.Update(storage))
 	r.Get("/value/{type}/{name}", handlers.Get(storage))
@@ -121,6 +124,7 @@ func setupInmemoryServer(cfg *config.ServerConfig) (*chi.Mux, error) {
 	r := chi.NewRouter()
 	r.Use(chiMiddleware.Logger, middleware.Decompress, chiMiddleware.Compress(5))
 	r.Post("/update/", handlers.UpdateBody(storage))
+	r.Post("/updates/", handlers.UpdateBatch(storage))
 	r.Post("/value/", handlers.GetBody(storage))
 	r.Post("/update/{type}/{name}/{value}", handlers.Update(storage))
 	r.Get("/value/{type}/{name}", handlers.Get(storage))

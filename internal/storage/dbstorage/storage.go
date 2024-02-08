@@ -2,6 +2,8 @@ package dbstorage
 
 import (
 	"context"
+	"database/sql"
+	"github.com/vindosVP/metrics/internal/models"
 )
 
 type Counter interface {
@@ -21,15 +23,59 @@ type Gauge interface {
 }
 
 type Storage struct {
+	db *sql.DB
 	cr Counter
 	gr Gauge
 }
 
-func New(cRepo Counter, gRepo Gauge) *Storage {
+func New(cRepo Counter, gRepo Gauge, db *sql.DB) *Storage {
 	return &Storage{
+		db: db,
 		cr: cRepo,
 		gr: gRepo,
 	}
+}
+
+func (s *Storage) InsertBatch(ctx context.Context, batch []*models.Metrics) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	defer tx.Rollback()
+	if err != nil {
+		return err
+	}
+	gstmt, err := tx.PrepareContext(ctx, "insert into gauges (id, value) values ($1, $2) on conflict (id) do update set value = $2")
+	if err != nil {
+		return err
+	}
+	cstmt, err := tx.PrepareContext(ctx, "insert into counters (id, value) values ($1, $2) on conflict (id) do update set value = $2")
+	if err != nil {
+		return err
+	}
+	for _, metric := range batch {
+		switch metric.MType {
+		case models.Counter:
+			exists, err := s.cr.Exists(ctx, metric.ID)
+			if err != nil {
+				return err
+			}
+			val := *metric.Delta
+			if exists {
+				cval, err := s.cr.Get(ctx, metric.ID)
+				if err != nil {
+					return err
+				}
+				val += cval
+			}
+			if _, err := cstmt.ExecContext(ctx, metric.ID, val); err != nil {
+				return err
+			}
+		case models.Gauge:
+			val := *metric.Value
+			if _, err := gstmt.ExecContext(ctx, metric.ID, val); err != nil {
+				return err
+			}
+		}
+	}
+	return tx.Commit()
 }
 
 func (s *Storage) UpdateGauge(ctx context.Context, name string, v float64) (float64, error) {
