@@ -132,17 +132,23 @@ func setupInmemoryServer(cfg *config.ServerConfig) (*chi.Mux, error) {
 
 func createTables(db *sql.DB) error {
 	ctx := context.Background()
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
 	gaugeRequest := "CREATE TABLE IF NOT EXISTS gauges (id VARCHAR(250) NOT NULL PRIMARY KEY, value double precision NOT NULL)"
 	counterRequest := "CREATE TABLE IF NOT EXISTS counters (id VARCHAR(250) NOT NULL PRIMARY KEY, value integer NOT NULL)"
 
-	_, err := db.ExecContext(ctx, gaugeRequest)
+	_, err = tx.ExecContext(ctx, gaugeRequest)
+	if err != nil {
+		return err
+	}
+	_, err = tx.ExecContext(ctx, counterRequest)
 	if err != nil {
 		return err
 	}
 
-	_, err = db.ExecContext(ctx, counterRequest)
-	if err != nil {
-		return err
-	}
-	return nil
+	return tx.Commit()
 }
