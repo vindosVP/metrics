@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"github.com/vindosVP/metrics/internal/models"
+	"github.com/vindosVP/metrics/internal/repos"
 )
 
 type Counter interface {
@@ -110,7 +111,7 @@ func (s *Storage) GetGauge(ctx context.Context, name string) (float64, error) {
 		return 0, err
 	}
 	if !exists {
-		return 0, ErrMetricNotRegistered
+		return 0, repos.ErrMetricNotRegistered
 	}
 	return s.gr.Get(ctx, name)
 }
@@ -121,7 +122,7 @@ func (s *Storage) GetCounter(ctx context.Context, name string) (int64, error) {
 		return 0, err
 	}
 	if !exists {
-		return 0, ErrMetricNotRegistered
+		return 0, repos.ErrMetricNotRegistered
 	}
 	return s.cr.Get(ctx, name)
 }
