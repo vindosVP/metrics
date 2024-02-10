@@ -47,25 +47,14 @@ func (s *Storage) InsertBatch(ctx context.Context, batch []*models.Metrics) erro
 	if err != nil {
 		return err
 	}
-	cstmt, err := tx.PrepareContext(ctx, "insert into counters (id, value) values ($1, $2) on conflict (id) do update set value = $2")
+	cstmt, err := tx.PrepareContext(ctx, "insert into counters as t (id, value) values ($1, $2) on conflict (id) do update set value = t.value + $2")
 	if err != nil {
 		return err
 	}
 	for _, metric := range batch {
 		switch metric.MType {
 		case models.Counter:
-			exists, err := s.cr.Exists(ctx, metric.ID)
-			if err != nil {
-				return err
-			}
 			val := *metric.Delta
-			if exists {
-				cval, err := s.cr.Get(ctx, metric.ID)
-				if err != nil {
-					return err
-				}
-				val += cval
-			}
 			if _, err := cstmt.ExecContext(ctx, metric.ID, val); err != nil {
 				return err
 			}
