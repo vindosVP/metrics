@@ -5,13 +5,16 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/avast/retry-go/v4"
 	"github.com/go-resty/resty/v2"
 	"github.com/vindosVP/metrics/cmd/agent/config"
 	"github.com/vindosVP/metrics/internal/models"
 	"github.com/vindosVP/metrics/pkg/logger"
 	"go.uber.org/zap"
 	"net/http"
+	"syscall"
 	"time"
 )
 
@@ -43,6 +46,12 @@ func New(cfg *config.AgentConfig, s MetricsStorage) *Sender {
 	}
 }
 
+var retryDelays = map[uint]time.Duration{
+	0: 1 * time.Second,
+	1: 3 * time.Second,
+	2: 5 * time.Second,
+}
+
 func (s *Sender) Run() {
 	tick := time.NewTicker(s.ReportInterval * time.Second)
 	defer tick.Stop()
@@ -69,7 +78,6 @@ func (s *Sender) SendMetrics() {
 	}
 
 	s.send(c, g)
-
 	_, err = s.Storage.SetCounter(ctx, "PollCount", 0)
 	if err != nil {
 		logger.Log.Error(
@@ -103,10 +111,12 @@ func (s *Sender) send(c map[string]int64, g map[string]float64) {
 	cw.Close()
 
 	url := fmt.Sprintf("http://%s/updates/", s.ServerAddr)
-	resp, err := s.Client.R().
-		SetHeader("Content-Encoding", "gzip").
-		SetBody(&b).
-		Post(url)
+	resp, err := retry.DoWithData(func() (*resty.Response, error) {
+		return s.Client.R().
+			SetHeader("Content-Encoding", "gzip").
+			SetBody(&b).
+			Post(url)
+	}, retryOpts()...)
 
 	if err != nil {
 		logger.Log.Error("Failed to send metrics", zap.Error(err))
@@ -144,4 +154,20 @@ func makeButch(c map[string]int64, g map[string]float64) []*models.Metrics {
 	}
 
 	return batch
+}
+
+func retryOpts() []retry.Option {
+	return []retry.Option{
+		retry.RetryIf(func(err error) bool {
+			return errors.Is(err, syscall.ECONNREFUSED)
+		}),
+		retry.DelayType(func(n uint, err error, config *retry.Config) time.Duration {
+			delay := retryDelays[n]
+			return delay
+		}),
+		retry.OnRetry(func(n uint, err error) {
+			logger.Log.Info(fmt.Sprintf("Failed to connect to server, retrying in %s", retryDelays[n]))
+		}),
+		retry.Attempts(4),
+	}
 }
