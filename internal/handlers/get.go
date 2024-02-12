@@ -1,9 +1,10 @@
 package handlers
 
 import (
+	"errors"
 	"github.com/go-chi/chi/v5"
 	"github.com/vindosVP/metrics/internal/models"
-	"github.com/vindosVP/metrics/internal/repos"
+	"github.com/vindosVP/metrics/internal/storage"
 	"net/http"
 	"strconv"
 )
@@ -24,11 +25,10 @@ func Get(s MetricsStorage) http.HandlerFunc {
 		case models.Counter:
 			cvalue, err := s.GetCounter(req.Context(), metricName)
 			if err != nil {
-				var status int
-				if err == repos.ErrMetricNotRegistered {
+
+				status := http.StatusInternalServerError
+				if errors.Is(err, storage.ErrMetricNotRegistered) {
 					status = http.StatusNotFound
-				} else {
-					status = http.StatusInternalServerError
 				}
 				http.Error(w, err.Error(), status)
 				return
@@ -41,11 +41,9 @@ func Get(s MetricsStorage) http.HandlerFunc {
 		case models.Gauge:
 			gvalue, err := s.GetGauge(req.Context(), metricName)
 			if err != nil {
-				var status int
-				if err == repos.ErrMetricNotRegistered {
+				status := http.StatusInternalServerError
+				if errors.Is(err, storage.ErrMetricNotRegistered) {
 					status = http.StatusNotFound
-				} else {
-					status = http.StatusInternalServerError
 				}
 				http.Error(w, err.Error(), status)
 				return

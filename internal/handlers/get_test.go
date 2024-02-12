@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/vindosVP/metrics/internal/handlers/mocks"
-	"github.com/vindosVP/metrics/internal/repos"
+	"github.com/vindosVP/metrics/internal/storage"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -136,7 +136,7 @@ func TestGet(t *testing.T) {
 				needed: true,
 				name:   "test",
 				value:  0,
-				err:    repos.ErrMetricNotRegistered,
+				err:    storage.ErrMetricNotRegistered,
 			},
 			mockCounter: mockCounter{
 				needed: false,
@@ -164,7 +164,7 @@ func TestGet(t *testing.T) {
 				needed: true,
 				name:   "test",
 				value:  0,
-				err:    repos.ErrMetricNotRegistered,
+				err:    storage.ErrMetricNotRegistered,
 			},
 			url:    "/value/counter/test",
 			method: http.MethodGet,
