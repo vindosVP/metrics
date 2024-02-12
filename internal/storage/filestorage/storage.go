@@ -2,7 +2,10 @@ package filestorage
 
 import (
 	"context"
+	"errors"
 	"github.com/vindosVP/metrics/internal/models"
+	"github.com/vindosVP/metrics/internal/repos"
+	"github.com/vindosVP/metrics/internal/storage"
 	"github.com/vindosVP/metrics/pkg/logger"
 	"go.uber.org/zap"
 )
@@ -70,11 +73,25 @@ func (s *Storage) UpdateCounter(ctx context.Context, name string, v int64) (int6
 }
 
 func (s *Storage) GetGauge(ctx context.Context, name string) (float64, error) {
-	return s.gRepo.Get(ctx, name)
+	val, err := s.gRepo.Get(ctx, name)
+	if errors.Is(err, repos.ErrMetricNotRegistered) {
+		return 0, storage.ErrMetricNotRegistered
+	}
+	if err != nil {
+		return 0, err
+	}
+	return val, nil
 }
 
 func (s *Storage) GetCounter(ctx context.Context, name string) (int64, error) {
-	return s.cRepo.Get(ctx, name)
+	val, err := s.cRepo.Get(ctx, name)
+	if errors.Is(err, repos.ErrMetricNotRegistered) {
+		return 0, storage.ErrMetricNotRegistered
+	}
+	if err != nil {
+		return 0, err
+	}
+	return val, nil
 }
 
 func (s *Storage) GetAllGauge(ctx context.Context) (map[string]float64, error) {

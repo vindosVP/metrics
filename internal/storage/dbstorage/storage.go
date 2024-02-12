@@ -3,6 +3,7 @@ package dbstorage
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"github.com/vindosVP/metrics/internal/models"
 	"github.com/vindosVP/metrics/internal/storage"
 )
@@ -69,29 +70,29 @@ func (s *Storage) UpdateCounter(ctx context.Context, name string, v int64) (int6
 func (s *Storage) GetGauge(ctx context.Context, name string) (float64, error) {
 	query := "select value from gauges where id = $1"
 	row := s.db.QueryRowContext(ctx, query, name)
-	var value sql.NullFloat64
+	var value float64
 	err := row.Scan(&value)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, storage.ErrMetricNotRegistered
+	}
 	if err != nil {
 		return 0, err
 	}
-	if !value.Valid {
-		return 0, storage.ErrMetricNotRegistered
-	}
-	return value.Float64, nil
+	return value, nil
 }
 
 func (s *Storage) GetCounter(ctx context.Context, name string) (int64, error) {
 	query := "select value from counters where id = $1"
 	row := s.db.QueryRowContext(ctx, query, name)
-	var value sql.NullInt64
+	var value int64
 	err := row.Scan(&value)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, storage.ErrMetricNotRegistered
+	}
 	if err != nil {
 		return 0, err
 	}
-	if !value.Valid {
-		return 0, storage.ErrMetricNotRegistered
-	}
-	return value.Int64, nil
+	return value, nil
 }
 
 func (s *Storage) GetAllGauge(ctx context.Context) (map[string]float64, error) {
