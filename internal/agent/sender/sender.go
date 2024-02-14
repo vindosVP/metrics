@@ -169,5 +169,6 @@ func retryOpts() []retry.Option {
 			logger.Log.Info(fmt.Sprintf("Failed to connect to server, retrying in %s", retryDelays[n]))
 		}),
 		retry.Attempts(4),
+		retry.LastErrorOnly(true),
 	}
 }

@@ -2,7 +2,6 @@ package dbstorage
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"github.com/avast/retry-go/v4"
@@ -87,7 +86,7 @@ func (s *Storage) GetGauge(ctx context.Context, name string) (float64, error) {
 		row := s.db.QueryRow(ctx, query, name)
 		var value float64
 		err := row.Scan(&value)
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return 0, storage.ErrMetricNotRegistered
 		}
 		if err != nil {
@@ -103,7 +102,7 @@ func (s *Storage) GetCounter(ctx context.Context, name string) (int64, error) {
 		row := s.db.QueryRow(ctx, query, name)
 		var value int64
 		err := row.Scan(&value)
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return 0, storage.ErrMetricNotRegistered
 		}
 		if err != nil {
@@ -189,6 +188,7 @@ func retryOpts() []retry.Option {
 			logger.Log.Info(fmt.Sprintf("Failed to connect to database, retrying in %s", retryDelays[n]))
 		}),
 		retry.Attempts(4),
+		retry.LastErrorOnly(true),
 	}
 }
 
