@@ -9,8 +9,6 @@ import (
 	"net/http"
 )
 
-// TODO: tests
-
 func UpdateBatch(s MetricsStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 
