@@ -132,8 +132,8 @@ func setupInmemoryServer(cfg *config.ServerConfig) (*chi.Mux, error) {
 
 func createTables(conn *pgx.Conn) error {
 	ctx := context.Background()
-	query := `CREATE TABLE IF NOT EXISTS gauges (id TEXT NOT NULL PRIMARY KEY, value double precision NOT NULL);
-			  CREATE TABLE IF NOT EXISTS counters (id TEXT NOT NULL PRIMARY KEY, value INTEGER NOT NULL)`
+	query := `CREATE TABLE IF NOT EXISTS gauges (id TEXT NOT NULL PRIMARY KEY, value DOUBLE PRECISION NOT NULL);
+			  CREATE TABLE IF NOT EXISTS counters (id TEXT NOT NULL PRIMARY KEY, value BIGINT NOT NULL)`
 	_, err := conn.Exec(ctx, query)
 	if err != nil {
 		return err

@@ -54,7 +54,11 @@ func (s *Storage) InsertBatch(ctx context.Context, batch []*models.Metrics) erro
 				}
 			}
 		}
-		return tx.Commit(ctx)
+		err = tx.Commit(ctx)
+		if err != nil {
+			logger.Log.Error(fmt.Sprintf("Error commiting transaction: %v", err))
+		}
+		return err
 	}, retryOpts()...)
 }
 
