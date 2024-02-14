@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/avast/retry-go/v4"
 	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5"
 	"github.com/lib/pq"
 	"github.com/vindosVP/metrics/internal/models"
 	"github.com/vindosVP/metrics/internal/storage"
@@ -22,52 +23,46 @@ var retryDelays = map[uint]time.Duration{
 }
 
 type Storage struct {
-	db *sql.DB
+	db *pgx.Conn
 }
 
-func New(db *sql.DB) *Storage {
+func New(conn *pgx.Conn) *Storage {
 	return &Storage{
-		db: db,
+		db: conn,
 	}
 }
 
 func (s *Storage) InsertBatch(ctx context.Context, batch []*models.Metrics) error {
 	return retry.Do(func() error {
-		tx, err := s.db.BeginTx(ctx, nil)
-		defer tx.Rollback()
+		tx, err := s.db.BeginTx(ctx, pgx.TxOptions{})
+		defer tx.Rollback(ctx)
 		if err != nil {
 			return err
 		}
-		gstmt, err := tx.PrepareContext(ctx, "insert into gauges (id, value) values ($1, $2) on conflict (id) do update set value = $2")
-		if err != nil {
-			return err
-		}
-		cstmt, err := tx.PrepareContext(ctx, "insert into counters as t (id, value) values ($1, $2) on conflict (id) do update set value = t.value + $2")
-		if err != nil {
-			return err
-		}
+		gaugeQuery := "insert into gauges (id, value) values ($1, $2) on conflict (id) do update set value = $2"
+		counterQuery := "insert into counters as t (id, value) values ($1, $2) on conflict (id) do update set value = t.value + $2"
 		for _, metric := range batch {
 			switch metric.MType {
 			case models.Counter:
 				val := *metric.Delta
-				if _, err := cstmt.ExecContext(ctx, metric.ID, val); err != nil {
+				if _, err := tx.Exec(ctx, counterQuery, metric.ID, val); err != nil {
 					return err
 				}
 			case models.Gauge:
 				val := *metric.Value
-				if _, err := gstmt.ExecContext(ctx, metric.ID, val); err != nil {
+				if _, err := tx.Exec(ctx, gaugeQuery, metric.ID, val); err != nil {
 					return err
 				}
 			}
 		}
-		return tx.Commit()
+		return tx.Commit(ctx)
 	}, retryOpts()...)
 }
 
 func (s *Storage) UpdateGauge(ctx context.Context, name string, v float64) (float64, error) {
 	return retry.DoWithData(func() (float64, error) {
 		query := "insert into gauges (id, value) values ($1, $2) on conflict (id) do update set value = $2"
-		_, err := s.db.ExecContext(ctx, query, name, v)
+		_, err := s.db.Exec(ctx, query, name, v)
 		if err != nil {
 			return 0, err
 		}
@@ -78,7 +73,7 @@ func (s *Storage) UpdateGauge(ctx context.Context, name string, v float64) (floa
 func (s *Storage) UpdateCounter(ctx context.Context, name string, v int64) (int64, error) {
 	return retry.DoWithData(func() (int64, error) {
 		query := "insert into counters as t (id, value) values ($1, $2) on conflict (id) do update set value = t.value + $2"
-		_, err := s.db.ExecContext(ctx, query, name, v)
+		_, err := s.db.Exec(ctx, query, name, v)
 		if err != nil {
 			return 0, err
 		}
@@ -89,7 +84,7 @@ func (s *Storage) UpdateCounter(ctx context.Context, name string, v int64) (int6
 func (s *Storage) GetGauge(ctx context.Context, name string) (float64, error) {
 	return retry.DoWithData(func() (float64, error) {
 		query := "select value from gauges where id = $1"
-		row := s.db.QueryRowContext(ctx, query, name)
+		row := s.db.QueryRow(ctx, query, name)
 		var value float64
 		err := row.Scan(&value)
 		if errors.Is(err, sql.ErrNoRows) {
@@ -105,7 +100,7 @@ func (s *Storage) GetGauge(ctx context.Context, name string) (float64, error) {
 func (s *Storage) GetCounter(ctx context.Context, name string) (int64, error) {
 	return retry.DoWithData(func() (int64, error) {
 		query := "select value from counters where id = $1"
-		row := s.db.QueryRowContext(ctx, query, name)
+		row := s.db.QueryRow(ctx, query, name)
 		var value int64
 		err := row.Scan(&value)
 		if errors.Is(err, sql.ErrNoRows) {
@@ -120,7 +115,7 @@ func (s *Storage) GetCounter(ctx context.Context, name string) (int64, error) {
 
 func (s *Storage) GetAllGauge(ctx context.Context) (map[string]float64, error) {
 	return retry.DoWithData(func() (map[string]float64, error) {
-		rows, err := s.db.QueryContext(ctx, "select id, value from gauges order by id")
+		rows, err := s.db.Query(ctx, "select id, value from gauges order by id")
 		if err != nil {
 			return nil, err
 		}
@@ -146,7 +141,7 @@ func (s *Storage) GetAllGauge(ctx context.Context) (map[string]float64, error) {
 
 func (s *Storage) GetAllCounter(ctx context.Context) (map[string]int64, error) {
 	return retry.DoWithData(func() (map[string]int64, error) {
-		rows, err := s.db.QueryContext(ctx, "select id, value from counters order by id")
+		rows, err := s.db.Query(ctx, "select id, value from counters order by id")
 		if err != nil {
 			return nil, err
 		}
@@ -173,7 +168,7 @@ func (s *Storage) GetAllCounter(ctx context.Context) (map[string]int64, error) {
 func (s *Storage) SetCounter(ctx context.Context, name string, v int64) (int64, error) {
 	return retry.DoWithData(func() (int64, error) {
 		query := "insert into counters (id, value) values ($1, $2) on conflict (id) do update set value = $2"
-		_, err := s.db.ExecContext(ctx, query, name, v)
+		_, err := s.db.Exec(ctx, query, name, v)
 		if err != nil {
 			return 0, err
 		}

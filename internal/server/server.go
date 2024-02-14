@@ -2,11 +2,10 @@ package server
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
-	_ "github.com/lib/pq"
+	"github.com/jackc/pgx/v5"
 	"github.com/vindosVP/metrics/cmd/server/config"
 	"github.com/vindosVP/metrics/internal/handlers"
 	"github.com/vindosVP/metrics/internal/middleware"
@@ -40,14 +39,15 @@ func Run(cfg *config.ServerConfig) error {
 	if useDatabase {
 		logger.Log.Info("Starting database server")
 		logger.Log.Info("Connecting to database")
-		db, err := sql.Open("postgres", cfg.DatabaseDNS)
+		ctx := context.Background()
+		conn, err := pgx.Connect(ctx, cfg.DatabaseDNS)
 		if err != nil {
 			logger.Log.Error("Failed to connect to database")
 			return err
 		}
 		logger.Log.Info("Connected successfully")
-		defer db.Close()
-		dbmux, err := setupDBServer(db)
+		defer conn.Close(ctx)
+		dbmux, err := setupDBServer(conn)
 		if err != nil {
 			return err
 		}
@@ -69,20 +69,20 @@ func Run(cfg *config.ServerConfig) error {
 	return nil
 }
 
-func setupDBServer(db *sql.DB) (*chi.Mux, error) {
+func setupDBServer(conn *pgx.Conn) (*chi.Mux, error) {
 
 	logger.Log.Info("Creating tables")
-	err := createTables(db)
+	err := createTables(conn)
 	if err != nil {
 		logger.Log.Error("Failed to create tables")
 		return nil, err
 	}
 	logger.Log.Info("Created successfully")
-	storage := dbstorage.New(db)
+	storage := dbstorage.New(conn)
 
 	r := chi.NewRouter()
 	r.Use(chiMiddleware.Logger, middleware.Decompress, chiMiddleware.Compress(5))
-	r.Get("/ping", handlers.Ping(db))
+	r.Get("/ping", handlers.Ping(conn))
 	r.Post("/update/", handlers.UpdateBody(storage))
 	r.Post("/updates/", handlers.UpdateBatch(storage))
 	r.Post("/value/", handlers.GetBody(storage))
@@ -130,25 +130,13 @@ func setupInmemoryServer(cfg *config.ServerConfig) (*chi.Mux, error) {
 	return r, nil
 }
 
-func createTables(db *sql.DB) error {
+func createTables(conn *pgx.Conn) error {
 	ctx := context.Background()
-	tx, err := db.BeginTx(ctx, nil)
+	query := `CREATE TABLE IF NOT EXISTS gauges (id TEXT NOT NULL PRIMARY KEY, value double precision NOT NULL);
+			  CREATE TABLE IF NOT EXISTS counters (id TEXT NOT NULL PRIMARY KEY, value INTEGER NOT NULL)`
+	_, err := conn.Exec(ctx, query)
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
-
-	gaugeRequest := "CREATE TABLE IF NOT EXISTS gauges (id VARCHAR(250) NOT NULL PRIMARY KEY, value double precision NOT NULL)"
-	counterRequest := "CREATE TABLE IF NOT EXISTS counters (id VARCHAR(250) NOT NULL PRIMARY KEY, value integer NOT NULL)"
-
-	_, err = tx.ExecContext(ctx, gaugeRequest)
-	if err != nil {
-		return err
-	}
-	_, err = tx.ExecContext(ctx, counterRequest)
-	if err != nil {
-		return err
-	}
-
-	return tx.Commit()
+	return nil
 }
