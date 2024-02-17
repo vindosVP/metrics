@@ -25,7 +25,7 @@ type tempConfig struct {
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	Restore         bool
 	StoreInterval   int
-	DatabaseDNS     string `env:"DATABASE_DNS"`
+	DatabaseDNS     string `env:"DATABASE_DSN"`
 	Key             string `env:"KEY"`
 }
 
