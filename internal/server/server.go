@@ -47,7 +47,7 @@ func Run(cfg *config.ServerConfig) error {
 		}
 		logger.Log.Info("Connected successfully")
 		defer conn.Close(ctx)
-		dbmux, err := setupDBServer(conn)
+		dbmux, err := setupDBServer(cfg, conn)
 		if err != nil {
 			return err
 		}
@@ -69,7 +69,7 @@ func Run(cfg *config.ServerConfig) error {
 	return nil
 }
 
-func setupDBServer(conn *pgx.Conn) (*chi.Mux, error) {
+func setupDBServer(cfg *config.ServerConfig, conn *pgx.Conn) (*chi.Mux, error) {
 
 	logger.Log.Info("Creating tables")
 	err := createTables(conn)
@@ -81,14 +81,20 @@ func setupDBServer(conn *pgx.Conn) (*chi.Mux, error) {
 	storage := dbstorage.New(conn)
 
 	r := chi.NewRouter()
-	r.Use(chiMiddleware.Logger, middleware.Decompress, chiMiddleware.Compress(5))
-	r.Get("/ping", handlers.Ping(conn))
-	r.Post("/update/", handlers.UpdateBody(storage))
-	r.Post("/updates/", handlers.UpdateBatch(storage))
-	r.Post("/value/", handlers.GetBody(storage))
-	r.Post("/update/{type}/{name}/{value}", handlers.Update(storage))
-	r.Get("/value/{type}/{name}", handlers.Get(storage))
-	r.Get("/", handlers.List(storage))
+	r.Use(middleware.Sign(cfg.Key))
+	r.Group(func(r chi.Router) { // group with hash validation
+		r.Use(chiMiddleware.Logger, middleware.ValidateHMAC(cfg.Key), middleware.Decompress, chiMiddleware.Compress(5))
+		r.Post("/update/", handlers.UpdateBody(storage))
+		r.Post("/updates/", handlers.UpdateBatch(storage))
+		r.Post("/value/", handlers.GetBody(storage))
+	})
+	r.Group(func(r chi.Router) {
+		r.Use(chiMiddleware.Logger, middleware.Decompress, chiMiddleware.Compress(5))
+		r.Post("/update/{type}/{name}/{value}", handlers.Update(storage))
+		r.Get("/value/{type}/{name}", handlers.Get(storage))
+		r.Get("/", handlers.List(storage))
+		r.Get("/ping", handlers.Ping(conn))
+	})
 	r.Handle("/assets/*", http.StripPrefix("/assets", http.FileServer(http.Dir("assets"))))
 
 	return r, nil
@@ -118,13 +124,19 @@ func setupInmemoryServer(cfg *config.ServerConfig) (*chi.Mux, error) {
 	}
 
 	r := chi.NewRouter()
-	r.Use(chiMiddleware.Logger, middleware.Decompress, chiMiddleware.Compress(5))
-	r.Post("/update/", handlers.UpdateBody(storage))
-	r.Post("/updates/", handlers.UpdateBatch(storage))
-	r.Post("/value/", handlers.GetBody(storage))
-	r.Post("/update/{type}/{name}/{value}", handlers.Update(storage))
-	r.Get("/value/{type}/{name}", handlers.Get(storage))
-	r.Get("/", handlers.List(storage))
+	r.Use(middleware.Sign(cfg.Key))
+	r.Group(func(r chi.Router) { // group with hash validation
+		r.Use(chiMiddleware.Logger, middleware.ValidateHMAC(cfg.Key), middleware.Decompress, chiMiddleware.Compress(5))
+		r.Post("/update/", handlers.UpdateBody(storage))
+		r.Post("/updates/", handlers.UpdateBatch(storage))
+		r.Post("/value/", handlers.GetBody(storage))
+	})
+	r.Group(func(r chi.Router) {
+		r.Use(chiMiddleware.Logger, middleware.Decompress, chiMiddleware.Compress(5))
+		r.Post("/update/{type}/{name}/{value}", handlers.Update(storage))
+		r.Get("/value/{type}/{name}", handlers.Get(storage))
+		r.Get("/", handlers.List(storage))
+	})
 	r.Handle("/assets/*", http.StripPrefix("/assets", http.FileServer(http.Dir("assets"))))
 
 	return r, nil

@@ -12,6 +12,7 @@ type AgentConfig struct {
 	PollInterval   time.Duration
 	ReportInterval time.Duration
 	LogLevel       string
+	Key            string
 }
 
 type tempConfig struct {
@@ -19,6 +20,7 @@ type tempConfig struct {
 	PollInterval   int    `env:"POLL_INTERVAL"`
 	ReportInterval int    `env:"REPORT_INTERVAL"`
 	LogLevel       string `env:"LOG_LEVEL"`
+	Key            string `env:"KEY"`
 }
 
 func NewAgentConfig() *AgentConfig {
@@ -28,6 +30,7 @@ func NewAgentConfig() *AgentConfig {
 	flag.IntVar(&flagConfig.PollInterval, "p", 2, "metrics poll interval")
 	flag.IntVar(&flagConfig.ReportInterval, "r", 10, "report interval")
 	flag.StringVar(&flagConfig.LogLevel, "l", "info", "log level")
+	flag.StringVar(&flagConfig.Key, "k", "", "secret key")
 	flag.Parse()
 
 	envConfig := &tempConfig{}
@@ -40,6 +43,10 @@ func NewAgentConfig() *AgentConfig {
 	tempCfg.PollInterval = envConfig.PollInterval
 	tempCfg.ReportInterval = envConfig.ReportInterval
 	tempCfg.LogLevel = envConfig.LogLevel
+	tempCfg.Key = envConfig.Key
+	if tempCfg.Key == "" {
+		tempCfg.Key = flagConfig.Key
+	}
 	if tempCfg.ServerAddr == "" {
 		tempCfg.ServerAddr = flagConfig.ServerAddr
 	}
@@ -58,6 +65,7 @@ func NewAgentConfig() *AgentConfig {
 		PollInterval:   time.Duration(tempCfg.PollInterval),
 		ReportInterval: time.Duration(tempCfg.ReportInterval),
 		LogLevel:       tempCfg.LogLevel,
+		Key:            tempCfg.Key,
 	}
 
 	return config

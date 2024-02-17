@@ -12,6 +12,7 @@ import (
 	"github.com/vindosVP/metrics/cmd/agent/config"
 	"github.com/vindosVP/metrics/internal/models"
 	"github.com/vindosVP/metrics/pkg/logger"
+	"github.com/vindosVP/metrics/pkg/utils"
 	"go.uber.org/zap"
 	"net/http"
 	"syscall"
@@ -35,6 +36,8 @@ type Sender struct {
 	Done           <-chan struct{}
 	Storage        MetricsStorage
 	Client         *resty.Client
+	UseHash        bool
+	Key            string
 }
 
 func New(cfg *config.AgentConfig, s MetricsStorage) *Sender {
@@ -43,6 +46,8 @@ func New(cfg *config.AgentConfig, s MetricsStorage) *Sender {
 		ServerAddr:     cfg.ServerAddr,
 		Storage:        s,
 		Client:         resty.New(),
+		UseHash:        cfg.Key != "",
+		Key:            cfg.Key,
 	}
 }
 
@@ -110,12 +115,24 @@ func (s *Sender) send(c map[string]int64, g map[string]float64) {
 	}
 	cw.Close()
 
+	hash := ""
+	if s.UseHash {
+		hash, err = utils.Sha256Hash(b.Bytes(), s.Key)
+		if err != nil {
+			logger.Log.Error("Failed to compute hash", zap.Error(err))
+			return
+		}
+	}
+
 	url := fmt.Sprintf("http://%s/updates/", s.ServerAddr)
 	resp, err := retry.DoWithData(func() (*resty.Response, error) {
-		return s.Client.R().
+		req := s.Client.R().
 			SetHeader("Content-Encoding", "gzip").
-			SetBody(&b).
-			Post(url)
+			SetBody(&b)
+		if s.UseHash {
+			req.SetHeader("HashSHA256", hash)
+		}
+		return req.Post(url)
 	}, retryOpts()...)
 
 	if err != nil {
@@ -126,7 +143,7 @@ func (s *Sender) send(c map[string]int64, g map[string]float64) {
 		logger.Log.Error("Failed to send metrics", zap.Int("code", resp.StatusCode()))
 		return
 	}
-	logger.Log.Info("Metric sent successfully")
+	logger.Log.Info("Metrics sent successfully")
 }
 
 func makeButch(c map[string]int64, g map[string]float64) []*models.Metrics {
