@@ -88,7 +88,7 @@ func (h *Hasher) ValidateHandler(next http.Handler) http.Handler {
 				return
 			}
 			providedHash := r.Header.Get("HashSHA256")
-			if providedHash != hash {
+			if providedHash != "" && providedHash != hash {
 				http.Error(w, "Invalid hash", http.StatusBadRequest)
 				return
 			}
