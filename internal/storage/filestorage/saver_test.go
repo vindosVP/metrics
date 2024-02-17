@@ -1,6 +1,7 @@
 package filestorage
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,12 +33,13 @@ func TestSaver(t *testing.T) {
 	gRepo := repos.NewGaugeRepo()
 	storage := memstorage.New(gRepo, cRepo)
 
+	ctx := context.Background()
 	for k, v := range cMetrics {
-		_, err := storage.SetCounter(k, v)
+		_, err := storage.SetCounter(ctx, k, v)
 		require.NoError(t, err)
 	}
 	for k, v := range gMetrics {
-		_, err := storage.UpdateGauge(k, v)
+		_, err := storage.UpdateGauge(ctx, k, v)
 		require.NoError(t, err)
 	}
 

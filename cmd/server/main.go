@@ -17,6 +17,6 @@ func main() {
 	}
 	err = server.Run(cfg)
 	if err != nil {
-		log.Fatalf(fmt.Sprintf("Failed to start server: %v", err))
+		logger.Log.Fatal(fmt.Sprintf("Failed to start server: %v", err))
 	}
 }

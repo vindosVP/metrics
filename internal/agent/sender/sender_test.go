@@ -1,6 +1,7 @@
 package sender
 
 import (
+	"context"
 	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,7 +23,8 @@ func TestSender(t *testing.T) {
 
 	cfg := config.NewAgentConfig()
 	cRepo := repos.NewCounterRepo()
-	_, err := cRepo.Set("PollCount", 100)
+	ctx := context.Background()
+	_, err := cRepo.Set(ctx, "PollCount", 100)
 	require.NoError(t, err)
 	gRepo := repos.NewGaugeRepo()
 	storage := memstorage.New(gRepo, cRepo)
@@ -42,7 +44,7 @@ func TestSender(t *testing.T) {
 	close(done)
 	<-senderShutdown
 
-	pollCount, err := storage.GetCounter("PollCount")
+	pollCount, err := storage.GetCounter(ctx, "PollCount")
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), pollCount)
 }

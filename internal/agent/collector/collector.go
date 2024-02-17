@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"context"
 	"github.com/vindosVP/metrics/cmd/agent/config"
 	"github.com/vindosVP/metrics/pkg/logger"
 	"go.uber.org/zap"
@@ -17,13 +18,13 @@ type Collector struct {
 
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=MetricsStorage
 type MetricsStorage interface {
-	UpdateGauge(name string, v float64) (float64, error)
-	UpdateCounter(name string, v int64) (int64, error)
-	SetCounter(name string, v int64) (int64, error)
-	GetGauge(name string) (float64, error)
-	GetAllGauge() (map[string]float64, error)
-	GetCounter(name string) (int64, error)
-	GetAllCounter() (map[string]int64, error)
+	UpdateGauge(ctx context.Context, name string, v float64) (float64, error)
+	UpdateCounter(ctx context.Context, name string, v int64) (int64, error)
+	SetCounter(ctx context.Context, name string, v int64) (int64, error)
+	GetGauge(ctx context.Context, name string) (float64, error)
+	GetAllGauge(ctx context.Context) (map[string]float64, error)
+	GetCounter(ctx context.Context, name string) (int64, error)
+	GetAllCounter(ctx context.Context) (map[string]int64, error)
 }
 
 func New(cfg *config.AgentConfig, s MetricsStorage) *Collector {
@@ -54,7 +55,8 @@ func (c *Collector) CollectMetrics() {
 }
 
 func (c *Collector) collectCounters() {
-	_, err := c.Storage.UpdateCounter("PollCount", 1)
+	ctx := context.Background()
+	_, err := c.Storage.UpdateCounter(ctx, "PollCount", 1)
 	if err != nil {
 		logger.Log.Error(
 			"Failed to update metric",
@@ -68,8 +70,9 @@ func (c *Collector) collectGauges() {
 	metrics := &runtime.MemStats{}
 	runtime.ReadMemStats(metrics)
 	m := toMap(metrics)
+	ctx := context.Background()
 	for key, val := range m {
-		_, err := c.Storage.UpdateGauge(key, val)
+		_, err := c.Storage.UpdateGauge(ctx, key, val)
 		if err != nil {
 			logger.Log.Error(
 				"Failed to update metric",

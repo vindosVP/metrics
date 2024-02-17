@@ -3,8 +3,9 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"github.com/vindosVP/metrics/internal/models"
-	"github.com/vindosVP/metrics/internal/repos"
+	"github.com/vindosVP/metrics/internal/storage"
 	"github.com/vindosVP/metrics/pkg/logger"
 	"go.uber.org/zap"
 	"net/http"
@@ -41,13 +42,12 @@ func GetBody(s MetricsStorage) http.HandlerFunc {
 
 		switch metrics.MType {
 		case models.Counter:
-			val, err := s.GetCounter(metrics.ID)
+			val, err := s.GetCounter(req.Context(), metrics.ID)
 			if err != nil {
-				var status int
-				if err == repos.ErrMetricNotRegistered {
+				status = http.StatusInternalServerError
+				if errors.Is(err, storage.ErrMetricNotRegistered) {
 					status = http.StatusNotFound
 				} else {
-					status = http.StatusInternalServerError
 					fields = append(fields, zap.Error(err))
 					logger.Log.Error("Failed to get metric value", fields...)
 				}
@@ -59,13 +59,12 @@ func GetBody(s MetricsStorage) http.HandlerFunc {
 			resp.MType = models.Counter
 			resp.Delta = &val
 		case models.Gauge:
-			val, err := s.GetGauge(metrics.ID)
+			val, err := s.GetGauge(req.Context(), metrics.ID)
 			if err != nil {
-				var status int
-				if err == repos.ErrMetricNotRegistered {
+				status = http.StatusInternalServerError
+				if errors.Is(err, storage.ErrMetricNotRegistered) {
 					status = http.StatusNotFound
 				} else {
-					status = http.StatusInternalServerError
 					fields = append(fields, zap.Error(err))
 					logger.Log.Error("Failed to get metric value", fields...)
 				}

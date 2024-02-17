@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"context"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/vindosVP/metrics/cmd/agent/config"
@@ -65,9 +66,10 @@ func TestCollector(t *testing.T) {
 
 	expCounters := []string{"PollCount"}
 
-	cGauges, err := storage.GetAllGauge()
+	ctx := context.Background()
+	cGauges, err := storage.GetAllGauge(ctx)
 	require.NoError(t, err)
-	cCounters, err := storage.GetAllCounter()
+	cCounters, err := storage.GetAllCounter(ctx)
 	require.NoError(t, err)
 
 	for _, key := range expGauges {

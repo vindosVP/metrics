@@ -1,8 +1,10 @@
 package memstorage
 
 import (
+	"context"
 	"errors"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/vindosVP/metrics/internal/storage/memstorage/mocks"
 	"testing"
 )
@@ -43,8 +45,9 @@ func TestStorage_UpdateCounter(t *testing.T) {
 			mockCounter := mocks.NewCounter(t)
 			mockGauge := mocks.NewGauge(t)
 			storage := New(mockGauge, mockCounter)
-			mockCounter.On("Update", tt.metricName, tt.metricValue).Return(tt.mockValue, tt.mockErr)
-			val, err := storage.UpdateCounter(tt.metricName, tt.metricValue)
+			ctx := context.Background()
+			mockCounter.On("Update", mock.Anything, tt.metricName, tt.metricValue).Return(tt.mockValue, tt.mockErr)
+			val, err := storage.UpdateCounter(ctx, tt.metricName, tt.metricValue)
 
 			if tt.wantErr {
 				assert.ErrorIs(t, err, tt.errValue)
@@ -93,8 +96,9 @@ func TestStorage_SetCounter(t *testing.T) {
 			mockCounter := mocks.NewCounter(t)
 			mockGauge := mocks.NewGauge(t)
 			storage := New(mockGauge, mockCounter)
-			mockCounter.On("Set", tt.metricName, tt.metricValue).Return(tt.mockValue, tt.mockErr)
-			val, err := storage.SetCounter(tt.metricName, tt.metricValue)
+			ctx := context.Background()
+			mockCounter.On("Set", mock.Anything, tt.metricName, tt.metricValue).Return(tt.mockValue, tt.mockErr)
+			val, err := storage.SetCounter(ctx, tt.metricName, tt.metricValue)
 
 			if tt.wantErr {
 				assert.ErrorIs(t, err, tt.errValue)
@@ -143,8 +147,9 @@ func TestStorage_UpdateGauge(t *testing.T) {
 			mockCounter := mocks.NewCounter(t)
 			mockGauge := mocks.NewGauge(t)
 			storage := New(mockGauge, mockCounter)
-			mockGauge.On("Update", tt.metricName, tt.metricValue).Return(tt.mockValue, tt.mockErr)
-			val, err := storage.UpdateGauge(tt.metricName, tt.metricValue)
+			ctx := context.Background()
+			mockGauge.On("Update", mock.Anything, tt.metricName, tt.metricValue).Return(tt.mockValue, tt.mockErr)
+			val, err := storage.UpdateGauge(ctx, tt.metricName, tt.metricValue)
 
 			if tt.wantErr {
 				assert.ErrorIs(t, err, tt.errValue)
@@ -191,8 +196,9 @@ func TestStorage_GetGauge(t *testing.T) {
 			mockCounter := mocks.NewCounter(t)
 			mockGauge := mocks.NewGauge(t)
 			storage := New(mockGauge, mockCounter)
-			mockGauge.On("Get", tt.metricName).Return(tt.mockValue, tt.mockErr)
-			val, err := storage.GetGauge(tt.metricName)
+			ctx := context.Background()
+			mockGauge.On("Get", mock.Anything, tt.metricName).Return(tt.mockValue, tt.mockErr)
+			val, err := storage.GetGauge(ctx, tt.metricName)
 
 			if tt.wantErr {
 				assert.ErrorIs(t, err, tt.errValue)
@@ -239,8 +245,9 @@ func TestStorage_GetCounter(t *testing.T) {
 			mockCounter := mocks.NewCounter(t)
 			mockGauge := mocks.NewGauge(t)
 			storage := New(mockGauge, mockCounter)
-			mockCounter.On("Get", tt.metricName).Return(tt.mockValue, tt.mockErr)
-			val, err := storage.GetCounter(tt.metricName)
+			ctx := context.Background()
+			mockCounter.On("Get", mock.Anything, tt.metricName).Return(tt.mockValue, tt.mockErr)
+			val, err := storage.GetCounter(ctx, tt.metricName)
 
 			if tt.wantErr {
 				assert.ErrorIs(t, err, tt.errValue)
@@ -296,9 +303,10 @@ func TestStorage_GetAllGauge(t *testing.T) {
 			mockCounter := mocks.NewCounter(t)
 			mockGauge := mocks.NewGauge(t)
 			storage := New(mockGauge, mockCounter)
-			mockGauge.On("GetAll").Return(tt.mockMetrics, tt.errValue)
+			ctx := context.Background()
+			mockGauge.On("GetAll", mock.Anything).Return(tt.mockMetrics, tt.errValue)
 
-			got, err := storage.GetAllGauge()
+			got, err := storage.GetAllGauge(ctx)
 			if tt.wantErr {
 				assert.ErrorIs(t, err, tt.errValue)
 			} else {
@@ -352,9 +360,9 @@ func TestStorage_GetAllCounter(t *testing.T) {
 			mockCounter := mocks.NewCounter(t)
 			mockGauge := mocks.NewGauge(t)
 			storage := New(mockGauge, mockCounter)
-			mockCounter.On("GetAll").Return(tt.mockMetrics, tt.errValue)
+			mockCounter.On("GetAll", mock.Anything).Return(tt.mockMetrics, tt.errValue)
 
-			got, err := storage.GetAllCounter()
+			got, err := storage.GetAllCounter(context.Background())
 			if tt.wantErr {
 				assert.ErrorIs(t, err, tt.errValue)
 			} else {

@@ -1,6 +1,7 @@
 package loader
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -59,9 +60,9 @@ func TestLoader(t *testing.T) {
 	err = loader.LoadMetrics()
 	require.NoError(t, err)
 
-	gotCMetrics, err := storage.GetAllCounter()
+	gotCMetrics, err := storage.GetAllCounter(context.Background())
 	require.NoError(t, err)
-	gotGMetrics, err := storage.GetAllGauge()
+	gotGMetrics, err := storage.GetAllGauge(context.Background())
 	require.NoError(t, err)
 
 	cEqual := reflect.DeepEqual(cMetrics, gotCMetrics)

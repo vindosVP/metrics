@@ -29,7 +29,7 @@ func Update(s MetricsStorage) http.HandlerFunc {
 				http.Error(w, "invalid value type", http.StatusBadRequest)
 				return
 			}
-			_, err = s.UpdateCounter(metricName, cval)
+			_, err = s.UpdateCounter(req.Context(), metricName, cval)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -41,7 +41,7 @@ func Update(s MetricsStorage) http.HandlerFunc {
 				http.Error(w, "invalid value type", http.StatusBadRequest)
 				return
 			}
-			_, err = s.UpdateGauge(metricName, gval)
+			_, err = s.UpdateGauge(req.Context(), metricName, gval)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
