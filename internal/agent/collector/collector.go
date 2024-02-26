@@ -72,9 +72,12 @@ func (c *Collector) collectGauges() {
 	metrics := &runtime.MemStats{}
 	runtime.ReadMemStats(metrics)
 	vMem, err := mem.VirtualMemory()
-	cpuUsage, err := cpu.Percent(time.Second, false)
 	if err != nil {
 		logger.Log.Error("Failed to collect memory metrics", zap.Error(err))
+	}
+	cpuUsage, err := cpu.Percent(time.Second, false)
+	if err != nil {
+		logger.Log.Error("Failed to collect CPU metrics", zap.Error(err))
 	}
 	m := toMap(metrics, vMem, cpuUsage)
 	ctx := context.Background()
