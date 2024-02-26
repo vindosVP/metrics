@@ -15,6 +15,7 @@ import (
 	"github.com/vindosVP/metrics/pkg/utils"
 	"go.uber.org/zap"
 	"net/http"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -30,6 +31,8 @@ type MetricsStorage interface {
 	GetAllCounter(ctx context.Context) (map[string]int64, error)
 }
 
+const chunkSize = 3
+
 type Sender struct {
 	ReportInterval time.Duration
 	ServerAddr     string
@@ -38,6 +41,27 @@ type Sender struct {
 	Client         *resty.Client
 	UseHash        bool
 	Key            string
+	RateLimit      int
+}
+
+type job struct {
+	id      int
+	url     string
+	metrics []*models.Metrics
+	useHash bool
+	key     string
+	client  *resty.Client
+}
+
+type result struct {
+	id  int
+	err error
+}
+
+var retryDelays = map[uint]time.Duration{
+	0: 1 * time.Second,
+	1: 3 * time.Second,
+	2: 5 * time.Second,
 }
 
 func New(cfg *config.AgentConfig, s MetricsStorage) *Sender {
@@ -48,13 +72,8 @@ func New(cfg *config.AgentConfig, s MetricsStorage) *Sender {
 		Client:         resty.New(),
 		UseHash:        cfg.Key != "",
 		Key:            cfg.Key,
+		RateLimit:      cfg.RateLimit,
 	}
-}
-
-var retryDelays = map[uint]time.Duration{
-	0: 1 * time.Second,
-	1: 3 * time.Second,
-	2: 5 * time.Second,
 }
 
 func (s *Sender) Run() {
@@ -81,8 +100,11 @@ func (s *Sender) SendMetrics() {
 	if err != nil {
 		logger.Log.Error("Failed to get counter metrics", zap.Error(err))
 	}
-
-	s.send(c, g)
+	butch := makeButch(c, g)
+	jobs := s.generateJobs(butch)
+	results := make(chan result)
+	go listenResults(results)
+	startWorkers(jobs, results, s.RateLimit)
 	_, err = s.Storage.SetCounter(ctx, "PollCount", 0)
 	if err != nil {
 		logger.Log.Error(
@@ -93,57 +115,104 @@ func (s *Sender) SendMetrics() {
 	}
 }
 
-func (s *Sender) send(c map[string]int64, g map[string]float64) {
-	if len(c)+len(g) == 0 {
-		return
-	}
+func (s *Sender) generateJobs(metrics []*models.Metrics) chan job {
+	jobs := make(chan job)
+	go func() {
+		size := chunkSize
+		url := fmt.Sprintf("http://%s/updates/", s.ServerAddr)
+		id := 1
+		for {
+			if len(metrics) == 0 {
+				break
+			}
+			if len(metrics) < size {
+				size = len(metrics)
+			}
+			jobs <- job{
+				id:      id,
+				url:     url,
+				metrics: metrics[0:size],
+				useHash: s.UseHash,
+				key:     s.Key,
+				client:  s.Client,
+			}
+			metrics = metrics[size:]
+			id++
+		}
+		defer close(jobs)
+	}()
+	return jobs
+}
 
-	batch := makeButch(c, g)
+func listenResults(results <-chan result) {
+	for res := range results {
+		if res.err != nil {
+			logger.Log.Error("worker failed", zap.Error(res.err), zap.Int("id", res.id))
+		} else {
+			logger.Log.Info("worker finished", zap.Int("id", res.id))
+		}
+	}
+}
+
+func startWorkers(jobs <-chan job, results chan<- result, workers int) {
+	wg := sync.WaitGroup{}
+	logger.Log.Info(fmt.Sprintf("Starting %d workers", workers))
+	for i := 1; i <= workers; i++ {
+		wg.Add(1)
+		go worker(jobs, results, &wg)
+	}
+	wg.Wait()
+	close(results)
+}
+
+func worker(jobs <-chan job, results chan<- result, wg *sync.WaitGroup) {
+	for j := range jobs {
+		err := send(j.client, j.url, j.metrics, j.useHash, j.key)
+		results <- result{j.id, err}
+	}
+	wg.Done()
+}
+
+func send(client *resty.Client, url string, chunk []*models.Metrics, useHash bool, key string) error {
 
 	var b bytes.Buffer
-	data, err := json.Marshal(batch)
+	data, err := json.Marshal(chunk)
 	if err != nil {
-		logger.Log.Error("Failed to marshal data", zap.Error(err))
-		return
+		return fmt.Errorf("failed to marshal metrics: %v", err)
 	}
 
 	cw := gzip.NewWriter(&b)
 	_, err = cw.Write(data)
 	if err != nil {
-		logger.Log.Error("Failed to compress data", zap.Error(err))
-		return
+		return fmt.Errorf("failed to gzip metrics: %v", err)
 	}
 	cw.Close()
 
 	hash := ""
-	if s.UseHash {
-		hash, err = utils.Sha256Hash(b.Bytes(), s.Key)
+	if useHash {
+		hash, err = utils.Sha256Hash(b.Bytes(), key)
 		if err != nil {
-			logger.Log.Error("Failed to compute hash", zap.Error(err))
-			return
+			return fmt.Errorf("failed to hash metrics: %v", err)
 		}
 	}
 
-	url := fmt.Sprintf("http://%s/updates/", s.ServerAddr)
 	resp, err := retry.DoWithData(func() (*resty.Response, error) {
-		req := s.Client.R().
+		req := client.R().
 			SetHeader("Content-Encoding", "gzip").
 			SetBody(&b)
-		if s.UseHash {
+		if useHash {
 			req.SetHeader("HashSHA256", hash)
 		}
 		return req.Post(url)
 	}, retryOpts()...)
 
 	if err != nil {
-		logger.Log.Error("Failed to send metrics", zap.Error(err))
-		return
+		return fmt.Errorf("failed to send metrics: %v", err)
 	}
 	if resp.StatusCode() != http.StatusOK {
-		logger.Log.Error("Failed to send metrics", zap.Int("code", resp.StatusCode()))
-		return
+		return fmt.Errorf("failed to send metrics: %v", resp.Status())
 	}
-	logger.Log.Info("Metrics sent successfully")
+	return nil
 }
 
 func makeButch(c map[string]int64, g map[string]float64) []*models.Metrics {
@@ -151,20 +220,22 @@ func makeButch(c map[string]int64, g map[string]float64) []*models.Metrics {
 
 	i := 0
 	for k, v := range g {
+		val := v
 		metric := &models.Metrics{
 			ID:    k,
 			MType: models.Gauge,
-			Value: &v,
+			Value: &val,
 		}
 		batch[i] = metric
 		i++
 	}
 
 	for k, v := range c {
+		val := v
 		metric := &models.Metrics{
 			ID:    k,
 			MType: models.Counter,
-			Delta: &v,
+			Delta: &val,
 		}
 		batch[i] = metric
 		i++

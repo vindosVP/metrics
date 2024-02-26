@@ -1,13 +1,13 @@
 package handlers
 
 import (
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"net/http"
 )
 
-func Ping(conn *pgx.Conn) http.HandlerFunc {
+func Ping(pool *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		err := conn.Ping(req.Context())
+		err := pool.Ping(req.Context())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
