@@ -16,6 +16,7 @@ type ServerConfig struct {
 	Restore         bool
 	StoreInterval   time.Duration
 	DatabaseDNS     string
+	Key             string
 }
 
 type tempConfig struct {
@@ -25,6 +26,7 @@ type tempConfig struct {
 	Restore         bool
 	StoreInterval   int
 	DatabaseDNS     string `env:"DATABASE_DSN"`
+	Key             string `env:"KEY"`
 }
 
 func NewServerConfig() *ServerConfig {
@@ -36,6 +38,7 @@ func NewServerConfig() *ServerConfig {
 	flag.IntVar(&flagConfig.StoreInterval, "i", 300, "store interval")
 	flag.BoolVar(&flagConfig.Restore, "r", true, "restore from dump file")
 	flag.StringVar(&flagConfig.DatabaseDNS, "d", "", "database dns")
+	flag.StringVar(&flagConfig.Key, "k", "", "hash key")
 	flag.Parse()
 
 	envConfig := &tempConfig{}
@@ -68,6 +71,10 @@ func NewServerConfig() *ServerConfig {
 	tempCfg.StoreInterval = envConfig.StoreInterval
 	tempCfg.FileStoragePath = envConfig.FileStoragePath
 	tempCfg.DatabaseDNS = envConfig.DatabaseDNS
+	tempCfg.Key = envConfig.Key
+	if tempCfg.Key == "" {
+		tempCfg.Key = flagConfig.Key
+	}
 	if tempCfg.DatabaseDNS == "" {
 		tempCfg.DatabaseDNS = flagConfig.DatabaseDNS
 	}
@@ -88,5 +95,6 @@ func NewServerConfig() *ServerConfig {
 		Restore:         tempCfg.Restore,
 		StoreInterval:   time.Duration(tempCfg.StoreInterval),
 		DatabaseDNS:     tempCfg.DatabaseDNS,
+		Key:             tempCfg.Key,
 	}
 }

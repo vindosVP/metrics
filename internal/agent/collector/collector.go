@@ -2,6 +2,8 @@ package collector
 
 import (
 	"context"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/vindosVP/metrics/cmd/agent/config"
 	"github.com/vindosVP/metrics/pkg/logger"
 	"go.uber.org/zap"
@@ -69,7 +71,15 @@ func (c *Collector) collectCounters() {
 func (c *Collector) collectGauges() {
 	metrics := &runtime.MemStats{}
 	runtime.ReadMemStats(metrics)
-	m := toMap(metrics)
+	vMem, err := mem.VirtualMemory()
+	if err != nil {
+		logger.Log.Error("Failed to collect memory metrics", zap.Error(err))
+	}
+	cpuUsage, err := cpu.Percent(time.Second, false)
+	if err != nil {
+		logger.Log.Error("Failed to collect CPU metrics", zap.Error(err))
+	}
+	m := toMap(metrics, vMem, cpuUsage)
 	ctx := context.Background()
 	for key, val := range m {
 		_, err := c.Storage.UpdateGauge(ctx, key, val)
@@ -83,36 +93,39 @@ func (c *Collector) collectGauges() {
 	}
 }
 
-func toMap(stats *runtime.MemStats) map[string]float64 {
+func toMap(stats *runtime.MemStats, vMem *mem.VirtualMemoryStat, cpuUsage []float64) map[string]float64 {
 	m := map[string]float64{
-		"Alloc":         float64(stats.Alloc),
-		"BuckHashSys":   float64(stats.BuckHashSys),
-		"Frees":         float64(stats.Frees),
-		"GCCPUFraction": stats.GCCPUFraction,
-		"GCSys":         float64(stats.GCSys),
-		"HeapAlloc":     float64(stats.HeapAlloc),
-		"HeapIdle":      float64(stats.HeapIdle),
-		"HeapInuse":     float64(stats.HeapInuse),
-		"HeapObjects":   float64(stats.HeapObjects),
-		"HeapReleased":  float64(stats.HeapReleased),
-		"HeapSys":       float64(stats.HeapSys),
-		"LastGC":        float64(stats.LastGC),
-		"Lookups":       float64(stats.Lookups),
-		"MCacheSys":     float64(stats.MCacheSys),
-		"MCacheInuse":   float64(stats.MCacheInuse),
-		"NextGC":        float64(stats.NextGC),
-		"MSpanInuse":    float64(stats.MSpanInuse),
-		"MSpanSys":      float64(stats.MSpanSys),
-		"Mallocs":       float64(stats.Mallocs),
-		"NumForcedGC":   float64(stats.NumForcedGC),
-		"NumGC":         float64(stats.NumGC),
-		"OtherSys":      float64(stats.OtherSys),
-		"PauseTotalNs":  float64(stats.PauseTotalNs),
-		"StackInuse":    float64(stats.StackInuse),
-		"StackSys":      float64(stats.StackSys),
-		"Sys":           float64(stats.Sys),
-		"TotalAlloc":    float64(stats.TotalAlloc),
-		"RandomValue":   rand.Float64(),
+		"Alloc":           float64(stats.Alloc),
+		"BuckHashSys":     float64(stats.BuckHashSys),
+		"Frees":           float64(stats.Frees),
+		"GCCPUFraction":   stats.GCCPUFraction,
+		"GCSys":           float64(stats.GCSys),
+		"HeapAlloc":       float64(stats.HeapAlloc),
+		"HeapIdle":        float64(stats.HeapIdle),
+		"HeapInuse":       float64(stats.HeapInuse),
+		"HeapObjects":     float64(stats.HeapObjects),
+		"HeapReleased":    float64(stats.HeapReleased),
+		"HeapSys":         float64(stats.HeapSys),
+		"LastGC":          float64(stats.LastGC),
+		"Lookups":         float64(stats.Lookups),
+		"MCacheSys":       float64(stats.MCacheSys),
+		"MCacheInuse":     float64(stats.MCacheInuse),
+		"NextGC":          float64(stats.NextGC),
+		"MSpanInuse":      float64(stats.MSpanInuse),
+		"MSpanSys":        float64(stats.MSpanSys),
+		"Mallocs":         float64(stats.Mallocs),
+		"NumForcedGC":     float64(stats.NumForcedGC),
+		"NumGC":           float64(stats.NumGC),
+		"OtherSys":        float64(stats.OtherSys),
+		"PauseTotalNs":    float64(stats.PauseTotalNs),
+		"StackInuse":      float64(stats.StackInuse),
+		"StackSys":        float64(stats.StackSys),
+		"Sys":             float64(stats.Sys),
+		"TotalAlloc":      float64(stats.TotalAlloc),
+		"RandomValue":     rand.Float64(),
+		"TotalMemory":     float64(vMem.Total),
+		"FreeMemory":      float64(vMem.Free),
+		"CPUutilization1": cpuUsage[0],
 	}
 
 	return m

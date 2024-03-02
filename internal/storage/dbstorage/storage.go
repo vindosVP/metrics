@@ -7,6 +7,7 @@ import (
 	"github.com/avast/retry-go/v4"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lib/pq"
 	"github.com/vindosVP/metrics/internal/models"
 	"github.com/vindosVP/metrics/internal/storage"
@@ -22,17 +23,18 @@ var retryDelays = map[uint]time.Duration{
 }
 
 type Storage struct {
-	db *pgx.Conn
+	db *pgxpool.Pool
 }
 
-func New(conn *pgx.Conn) *Storage {
+func New(pool *pgxpool.Pool) *Storage {
 	return &Storage{
-		db: conn,
+		db: pool,
 	}
 }
 
 func (s *Storage) InsertBatch(ctx context.Context, batch []*models.Metrics) error {
 	return retry.Do(func() error {
+		b := batch
 		tx, err := s.db.BeginTx(ctx, pgx.TxOptions{})
 		defer tx.Rollback(ctx)
 		if err != nil {
@@ -40,7 +42,7 @@ func (s *Storage) InsertBatch(ctx context.Context, batch []*models.Metrics) erro
 		}
 		gaugeQuery := "insert into gauges (id, value) values ($1, $2) on conflict (id) do update set value = $2"
 		counterQuery := "insert into counters as t (id, value) values ($1, $2) on conflict (id) do update set value = t.value + $2"
-		for _, metric := range batch {
+		for _, metric := range b {
 			switch metric.MType {
 			case models.Counter:
 				val := *metric.Delta

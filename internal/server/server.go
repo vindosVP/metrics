@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/vindosVP/metrics/cmd/server/config"
 	"github.com/vindosVP/metrics/internal/handlers"
 	"github.com/vindosVP/metrics/internal/middleware"
@@ -40,14 +40,14 @@ func Run(cfg *config.ServerConfig) error {
 		logger.Log.Info("Starting database server")
 		logger.Log.Info("Connecting to database")
 		ctx := context.Background()
-		conn, err := pgx.Connect(ctx, cfg.DatabaseDNS)
+		pool, err := pgxpool.New(ctx, cfg.DatabaseDNS)
 		if err != nil {
 			logger.Log.Error("Failed to connect to database")
 			return err
 		}
 		logger.Log.Info("Connected successfully")
-		defer conn.Close(ctx)
-		dbmux, err := setupDBServer(conn)
+		defer pool.Close()
+		dbmux, err := setupDBServer(cfg, pool)
 		if err != nil {
 			return err
 		}
@@ -69,26 +69,32 @@ func Run(cfg *config.ServerConfig) error {
 	return nil
 }
 
-func setupDBServer(conn *pgx.Conn) (*chi.Mux, error) {
+func setupDBServer(cfg *config.ServerConfig, pool *pgxpool.Pool) (*chi.Mux, error) {
 
 	logger.Log.Info("Creating tables")
-	err := createTables(conn)
+	err := createTables(pool)
 	if err != nil {
 		logger.Log.Error("Failed to create tables")
 		return nil, err
 	}
 	logger.Log.Info("Created successfully")
-	storage := dbstorage.New(conn)
+	storage := dbstorage.New(pool)
 
 	r := chi.NewRouter()
-	r.Use(chiMiddleware.Logger, middleware.Decompress, chiMiddleware.Compress(5))
-	r.Get("/ping", handlers.Ping(conn))
-	r.Post("/update/", handlers.UpdateBody(storage))
-	r.Post("/updates/", handlers.UpdateBatch(storage))
-	r.Post("/value/", handlers.GetBody(storage))
-	r.Post("/update/{type}/{name}/{value}", handlers.Update(storage))
-	r.Get("/value/{type}/{name}", handlers.Get(storage))
-	r.Get("/", handlers.List(storage))
+	r.Use(middleware.Sign(cfg.Key))
+	r.Group(func(r chi.Router) { // group with hash validation
+		r.Use(chiMiddleware.Logger, middleware.ValidateHMAC(cfg.Key), middleware.Decompress, chiMiddleware.Compress(5))
+		r.Post("/update/", handlers.UpdateBody(storage))
+		r.Post("/updates/", handlers.UpdateBatch(storage))
+		r.Post("/value/", handlers.GetBody(storage))
+	})
+	r.Group(func(r chi.Router) {
+		r.Use(chiMiddleware.Logger, middleware.Decompress, chiMiddleware.Compress(5))
+		r.Post("/update/{type}/{name}/{value}", handlers.Update(storage))
+		r.Get("/value/{type}/{name}", handlers.Get(storage))
+		r.Get("/", handlers.List(storage))
+		r.Get("/ping", handlers.Ping(pool))
+	})
 	r.Handle("/assets/*", http.StripPrefix("/assets", http.FileServer(http.Dir("assets"))))
 
 	return r, nil
@@ -118,23 +124,29 @@ func setupInmemoryServer(cfg *config.ServerConfig) (*chi.Mux, error) {
 	}
 
 	r := chi.NewRouter()
-	r.Use(chiMiddleware.Logger, middleware.Decompress, chiMiddleware.Compress(5))
-	r.Post("/update/", handlers.UpdateBody(storage))
-	r.Post("/updates/", handlers.UpdateBatch(storage))
-	r.Post("/value/", handlers.GetBody(storage))
-	r.Post("/update/{type}/{name}/{value}", handlers.Update(storage))
-	r.Get("/value/{type}/{name}", handlers.Get(storage))
-	r.Get("/", handlers.List(storage))
+	r.Use(middleware.Sign(cfg.Key))
+	r.Group(func(r chi.Router) { // group with hash validation
+		r.Use(chiMiddleware.Logger, middleware.ValidateHMAC(cfg.Key), middleware.Decompress, chiMiddleware.Compress(5))
+		r.Post("/update/", handlers.UpdateBody(storage))
+		r.Post("/updates/", handlers.UpdateBatch(storage))
+		r.Post("/value/", handlers.GetBody(storage))
+	})
+	r.Group(func(r chi.Router) {
+		r.Use(chiMiddleware.Logger, middleware.Decompress, chiMiddleware.Compress(5))
+		r.Post("/update/{type}/{name}/{value}", handlers.Update(storage))
+		r.Get("/value/{type}/{name}", handlers.Get(storage))
+		r.Get("/", handlers.List(storage))
+	})
 	r.Handle("/assets/*", http.StripPrefix("/assets", http.FileServer(http.Dir("assets"))))
 
 	return r, nil
 }
 
-func createTables(conn *pgx.Conn) error {
+func createTables(pool *pgxpool.Pool) error {
 	ctx := context.Background()
 	query := `CREATE TABLE IF NOT EXISTS gauges (id TEXT NOT NULL PRIMARY KEY, value DOUBLE PRECISION NOT NULL);
 			  CREATE TABLE IF NOT EXISTS counters (id TEXT NOT NULL PRIMARY KEY, value BIGINT NOT NULL)`
-	_, err := conn.Exec(ctx, query)
+	_, err := pool.Exec(ctx, query)
 	if err != nil {
 		return err
 	}
