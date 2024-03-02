@@ -100,8 +100,8 @@ func (s *Sender) SendMetrics() {
 	if err != nil {
 		logger.Log.Error("Failed to get counter metrics", zap.Error(err))
 	}
-	butch := makeButch(c, g)
-	jobs := s.generateJobs(butch)
+	batch := makeButch(c, g)
+	jobs := s.generateJobs(batch)
 	results := make(chan result)
 	go listenResults(results)
 	startWorkers(jobs, results, s.RateLimit)
