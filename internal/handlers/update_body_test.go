@@ -1,16 +1,18 @@
 package handlers
 
 import (
-	"github.com/go-chi/chi/v5"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/vindosVP/metrics/internal/repos"
-	"github.com/vindosVP/metrics/internal/storage/memstorage"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/vindosVP/metrics/internal/repos"
+	"github.com/vindosVP/metrics/internal/storage/memstorage"
 )
 
 func TestUpdateBody(t *testing.T) {

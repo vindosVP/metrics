@@ -2,11 +2,12 @@ package config
 
 import (
 	"flag"
-	"github.com/caarlos0/env/v10"
 	"log"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/caarlos0/env/v10"
 )
 
 type ServerConfig struct {

@@ -2,16 +2,18 @@ package handlers
 
 import (
 	"errors"
-	"github.com/go-chi/chi/v5"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
-	"github.com/vindosVP/metrics/internal/handlers/mocks"
-	"github.com/vindosVP/metrics/internal/storage"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+
+	"github.com/vindosVP/metrics/internal/handlers/mocks"
+	"github.com/vindosVP/metrics/internal/storage"
 )
 
 func TestGet(t *testing.T) {

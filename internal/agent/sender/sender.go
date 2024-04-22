@@ -7,17 +7,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/avast/retry-go/v4"
-	"github.com/go-resty/resty/v2"
-	"github.com/vindosVP/metrics/cmd/agent/config"
-	"github.com/vindosVP/metrics/internal/models"
-	"github.com/vindosVP/metrics/pkg/logger"
-	"github.com/vindosVP/metrics/pkg/utils"
-	"go.uber.org/zap"
 	"net/http"
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/avast/retry-go/v4"
+	"github.com/go-resty/resty/v2"
+	"go.uber.org/zap"
+
+	"github.com/vindosVP/metrics/cmd/agent/config"
+	"github.com/vindosVP/metrics/internal/models"
+	"github.com/vindosVP/metrics/pkg/logger"
+	"github.com/vindosVP/metrics/pkg/utils"
 )
 
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=MetricsStorage

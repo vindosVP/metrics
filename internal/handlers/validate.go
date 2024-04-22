@@ -1,9 +1,11 @@
 package handlers
 
 import (
-	"github.com/go-chi/chi/v5"
-	"github.com/vindosVP/metrics/internal/models"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
+
+	"github.com/vindosVP/metrics/internal/models"
 )
 
 func validate(req *http.Request, checkValue bool) (bool, string, int) {

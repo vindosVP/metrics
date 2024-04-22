@@ -2,11 +2,13 @@ package handlers
 
 import (
 	"errors"
-	"github.com/go-chi/chi/v5"
-	"github.com/vindosVP/metrics/internal/models"
-	"github.com/vindosVP/metrics/internal/storage"
 	"net/http"
 	"strconv"
+
+	"github.com/go-chi/chi/v5"
+
+	"github.com/vindosVP/metrics/internal/models"
+	"github.com/vindosVP/metrics/internal/storage"
 )
 
 func Get(s MetricsStorage) http.HandlerFunc {

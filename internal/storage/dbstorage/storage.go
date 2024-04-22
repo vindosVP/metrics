@@ -4,16 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"syscall"
+	"time"
+
 	"github.com/avast/retry-go/v4"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lib/pq"
+
 	"github.com/vindosVP/metrics/internal/models"
 	"github.com/vindosVP/metrics/internal/storage"
 	"github.com/vindosVP/metrics/pkg/logger"
-	"syscall"
-	"time"
 )
 
 var retryDelays = map[uint]time.Duration{

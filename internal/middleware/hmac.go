@@ -2,11 +2,13 @@ package middleware
 
 import (
 	"bytes"
-	"github.com/vindosVP/metrics/pkg/logger"
-	"github.com/vindosVP/metrics/pkg/utils"
-	"go.uber.org/zap"
 	"io"
 	"net/http"
+
+	"go.uber.org/zap"
+
+	"github.com/vindosVP/metrics/pkg/logger"
+	"github.com/vindosVP/metrics/pkg/utils"
 )
 
 func ValidateHMAC(key string) func(next http.Handler) http.Handler {

@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"net/http"
+
+	"go.uber.org/zap"
+
 	"github.com/vindosVP/metrics/internal/models"
 	"github.com/vindosVP/metrics/internal/storage"
 	"github.com/vindosVP/metrics/pkg/logger"
-	"go.uber.org/zap"
-	"net/http"
 )
 
 func GetBody(s MetricsStorage) http.HandlerFunc {

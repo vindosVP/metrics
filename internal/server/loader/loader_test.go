@@ -3,14 +3,16 @@ package loader
 import (
 	"context"
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/vindosVP/metrics/internal/models"
-	"github.com/vindosVP/metrics/internal/repos"
-	"github.com/vindosVP/metrics/internal/storage/memstorage"
 	"os"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/vindosVP/metrics/internal/models"
+	"github.com/vindosVP/metrics/internal/repos"
+	"github.com/vindosVP/metrics/internal/storage/memstorage"
 )
 
 func TestLoader(t *testing.T) {

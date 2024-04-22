@@ -2,10 +2,12 @@ package middleware
 
 import (
 	"compress/gzip"
-	"github.com/vindosVP/metrics/pkg/logger"
-	"go.uber.org/zap"
 	"net/http"
 	"strings"
+
+	"go.uber.org/zap"
+
+	"github.com/vindosVP/metrics/pkg/logger"
 )
 
 func Decompress(h http.Handler) http.Handler {

@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/http"
+
 	"github.com/vindosVP/metrics/internal/models"
 	"github.com/vindosVP/metrics/pkg/logger"
-	"net/http"
 )
 
 func UpdateBatch(s MetricsStorage) http.HandlerFunc {

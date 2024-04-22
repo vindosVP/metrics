@@ -3,9 +3,14 @@ package server
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.uber.org/zap"
+
 	"github.com/vindosVP/metrics/cmd/server/config"
 	"github.com/vindosVP/metrics/internal/handlers"
 	"github.com/vindosVP/metrics/internal/middleware"
@@ -16,9 +21,6 @@ import (
 	"github.com/vindosVP/metrics/internal/storage/filestorage"
 	"github.com/vindosVP/metrics/internal/storage/memstorage"
 	"github.com/vindosVP/metrics/pkg/logger"
-	"go.uber.org/zap"
-	"net/http"
-	"time"
 )
 
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=MetricsStorage

@@ -2,15 +2,17 @@ package sender
 
 import (
 	"context"
-	"github.com/jarcoal/httpmock"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/vindosVP/metrics/cmd/agent/config"
-	"github.com/vindosVP/metrics/internal/repos"
-	"github.com/vindosVP/metrics/internal/storage/memstorage"
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/jarcoal/httpmock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/vindosVP/metrics/cmd/agent/config"
+	"github.com/vindosVP/metrics/internal/repos"
+	"github.com/vindosVP/metrics/internal/storage/memstorage"
 )
 
 func TestSender(t *testing.T) {

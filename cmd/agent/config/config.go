@@ -2,9 +2,10 @@ package config
 
 import (
 	"flag"
-	"github.com/caarlos0/env/v10"
 	"log"
 	"time"
+
+	"github.com/caarlos0/env/v10"
 )
 
 type AgentConfig struct {

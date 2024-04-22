@@ -1,13 +1,15 @@
 package handlers
 
 import (
-	"github.com/go-chi/chi/v5"
-	"github.com/stretchr/testify/assert"
-	"github.com/vindosVP/metrics/internal/repos"
-	"github.com/vindosVP/metrics/internal/storage/memstorage"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/vindosVP/metrics/internal/repos"
+	"github.com/vindosVP/metrics/internal/storage/memstorage"
 )
 
 func TestUpdate(t *testing.T) {

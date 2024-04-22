@@ -2,14 +2,16 @@ package collector
 
 import (
 	"context"
-	"github.com/shirou/gopsutil/v3/cpu"
-	"github.com/shirou/gopsutil/v3/mem"
-	"github.com/vindosVP/metrics/cmd/agent/config"
-	"github.com/vindosVP/metrics/pkg/logger"
-	"go.uber.org/zap"
 	"math/rand"
 	"runtime"
 	"time"
+
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
+	"go.uber.org/zap"
+
+	"github.com/vindosVP/metrics/cmd/agent/config"
+	"github.com/vindosVP/metrics/pkg/logger"
 )
 
 type Collector struct {

@@ -3,11 +3,13 @@ package filestorage
 import (
 	"context"
 	"encoding/json"
-	"github.com/vindosVP/metrics/internal/models"
-	"github.com/vindosVP/metrics/pkg/logger"
-	"go.uber.org/zap"
 	"os"
 	"time"
+
+	"go.uber.org/zap"
+
+	"github.com/vindosVP/metrics/internal/models"
+	"github.com/vindosVP/metrics/pkg/logger"
 )
 
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=MetricsStorage

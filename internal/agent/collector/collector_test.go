@@ -2,13 +2,15 @@ package collector
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"github.com/vindosVP/metrics/cmd/agent/config"
 	"github.com/vindosVP/metrics/internal/repos"
 	"github.com/vindosVP/metrics/internal/storage/memstorage"
-	"testing"
-	"time"
 )
 
 func TestCollector(t *testing.T) {
