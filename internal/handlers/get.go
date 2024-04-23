@@ -1,3 +1,4 @@
+// Package handlers consist of handlers for the http server
 package handlers
 
 import (
@@ -11,6 +12,7 @@ import (
 	"github.com/vindosVP/metrics/internal/storage"
 )
 
+// Get returns value of requested metric with text/plain Content-Type.
 func Get(s MetricsStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 

@@ -13,6 +13,7 @@ import (
 	"github.com/vindosVP/metrics/pkg/logger"
 )
 
+// GetBody returns value of requested metric in json format with application/json Content-Type.
 func GetBody(s MetricsStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 

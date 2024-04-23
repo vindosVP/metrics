@@ -1,3 +1,4 @@
+// Package loader is a package to load previously saved metrics dumps
 package loader
 
 import (
@@ -11,17 +12,21 @@ import (
 	"github.com/vindosVP/metrics/pkg/logger"
 )
 
+// MetricsStorage consist methods to save metrics to the storage
+//
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=MetricsStorage
 type MetricsStorage interface {
 	SetCounter(ctx context.Context, name string, v int64) (int64, error)
 	UpdateGauge(ctx context.Context, name string, v float64) (float64, error)
 }
 
+// Loader consists data to load metrics dump
 type Loader struct {
 	filename string
 	storage  MetricsStorage
 }
 
+// New creates the Loader
 func New(filename string, storage MetricsStorage) *Loader {
 	return &Loader{
 		filename: filename,
@@ -29,6 +34,7 @@ func New(filename string, storage MetricsStorage) *Loader {
 	}
 }
 
+// LoadMetrics method reads the dump file and updates metrics values in the storage
 func (l *Loader) LoadMetrics() error {
 	ctx := context.Background()
 	data, err := os.ReadFile(l.filename)

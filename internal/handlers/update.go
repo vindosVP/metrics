@@ -11,6 +11,7 @@ import (
 	"github.com/vindosVP/metrics/pkg/logger"
 )
 
+// Update updates value of provided metric.
 func Update(s MetricsStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 

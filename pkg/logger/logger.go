@@ -1,18 +1,12 @@
+// Package logger initializes and configures zap logger
 package logger
 
 import "go.uber.org/zap"
 
+// Log consists configured logger instance
 var Log *zap.Logger = zap.NewNop()
 
-const (
-	DebugLevel = "debug"
-	InfoLevel  = "info"
-	WarnLevel  = "warn"
-	ErrorLevel = "error"
-	PanicLevel = "panic"
-	FatalLevel = "fatal"
-)
-
+// Initialize initialize the logger
 func Initialize(level string) error {
 	lvl, err := zap.ParseAtomicLevel(level)
 	if err != nil {

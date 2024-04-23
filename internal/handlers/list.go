@@ -30,6 +30,7 @@ const htmlTemplate = `
 </body>
 </html>`
 
+// List returns a html-table with all metrics collected.
 func List(s MetricsStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 

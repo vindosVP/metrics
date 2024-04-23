@@ -1,3 +1,4 @@
+// Package agent is a simple package to collect system metrics and sent them to the server.
 package agent
 
 import (
@@ -10,6 +11,7 @@ import (
 	"github.com/vindosVP/metrics/internal/storage/memstorage"
 )
 
+// Run starts the agent
 func Run(cfg *config.AgentConfig) error {
 
 	cRepo := repos.NewCounterRepo()

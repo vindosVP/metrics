@@ -1,3 +1,4 @@
+// Package dbstorage is a metrics storage working with postgres to store metrics.
 package dbstorage
 
 import (
@@ -24,16 +25,19 @@ var retryDelays = map[uint]time.Duration{
 	2: 5 * time.Second,
 }
 
+// Storage consists of postgres connection pool.
 type Storage struct {
 	db *pgxpool.Pool
 }
 
+// New creates the Storage.
 func New(pool *pgxpool.Pool) *Storage {
 	return &Storage{
 		db: pool,
 	}
 }
 
+// InsertBatch method saves provided metrics values to the database.
 func (s *Storage) InsertBatch(ctx context.Context, batch []*models.Metrics) error {
 	return retry.Do(func() error {
 		b := batch
@@ -66,6 +70,8 @@ func (s *Storage) InsertBatch(ctx context.Context, batch []*models.Metrics) erro
 	}, retryOpts()...)
 }
 
+// UpdateGauge method updates gauge metric value.
+// new value replaces the old one.
 func (s *Storage) UpdateGauge(ctx context.Context, name string, v float64) (float64, error) {
 	return retry.DoWithData(func() (float64, error) {
 		query := "insert into gauges (id, value) values ($1, $2) on conflict (id) do update set value = $2"
@@ -77,6 +83,8 @@ func (s *Storage) UpdateGauge(ctx context.Context, name string, v float64) (floa
 	}, retryOpts()...)
 }
 
+// UpdateCounter method updates counter metric value.
+// new value adds to the old one.
 func (s *Storage) UpdateCounter(ctx context.Context, name string, v int64) (int64, error) {
 	return retry.DoWithData(func() (int64, error) {
 		query := "insert into counters as t (id, value) values ($1, $2) on conflict (id) do update set value = t.value + $2"
@@ -88,6 +96,7 @@ func (s *Storage) UpdateCounter(ctx context.Context, name string, v int64) (int6
 	}, retryOpts()...)
 }
 
+// GetGauge method returns value of gauge metric
 func (s *Storage) GetGauge(ctx context.Context, name string) (float64, error) {
 	return retry.DoWithData(func() (float64, error) {
 		query := "select value from gauges where id = $1"
@@ -104,6 +113,7 @@ func (s *Storage) GetGauge(ctx context.Context, name string) (float64, error) {
 	}, retryOpts()...)
 }
 
+// GetCounter method returns value of counter metric
 func (s *Storage) GetCounter(ctx context.Context, name string) (int64, error) {
 	return retry.DoWithData(func() (int64, error) {
 		query := "select value from counters where id = $1"
@@ -120,6 +130,7 @@ func (s *Storage) GetCounter(ctx context.Context, name string) (int64, error) {
 	}, retryOpts()...)
 }
 
+// GetAllGauge method returns values of all collected gauge metrics
 func (s *Storage) GetAllGauge(ctx context.Context) (map[string]float64, error) {
 	return retry.DoWithData(func() (map[string]float64, error) {
 		rows, err := s.db.Query(ctx, "select id, value from gauges order by id")
@@ -146,6 +157,7 @@ func (s *Storage) GetAllGauge(ctx context.Context) (map[string]float64, error) {
 	}, retryOpts()...)
 }
 
+// GetAllCounter method returns values of all collected counter metrics
 func (s *Storage) GetAllCounter(ctx context.Context) (map[string]int64, error) {
 	return retry.DoWithData(func() (map[string]int64, error) {
 		rows, err := s.db.Query(ctx, "select id, value from counters order by id")
@@ -172,6 +184,8 @@ func (s *Storage) GetAllCounter(ctx context.Context) (map[string]int64, error) {
 	}, retryOpts()...)
 }
 
+// SetCounter method sets counter metric value.
+// new value replaces the old one.
 func (s *Storage) SetCounter(ctx context.Context, name string, v int64) (int64, error) {
 	return retry.DoWithData(func() (int64, error) {
 		query := "insert into counters (id, value) values ($1, $2) on conflict (id) do update set value = $2"

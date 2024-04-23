@@ -1,3 +1,4 @@
+// Package sender sends collected metrics to the server every n seconds
 package sender
 
 import (
@@ -22,28 +23,49 @@ import (
 	"github.com/vindosVP/metrics/pkg/utils"
 )
 
+// MetricsStorage consists of methods to write and get data from storage.
+//
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=MetricsStorage
 type MetricsStorage interface {
-	UpdateGauge(ctx context.Context, name string, v float64) (float64, error)
-	UpdateCounter(ctx context.Context, name string, v int64) (int64, error)
+
+	// SetCounter sets counter metric value.
+	// new value replaces the old one.
 	SetCounter(ctx context.Context, name string, v int64) (int64, error)
-	GetGauge(ctx context.Context, name string) (float64, error)
+
+	// GetAllGauge returns all collected gauge metrics.
 	GetAllGauge(ctx context.Context) (map[string]float64, error)
-	GetCounter(ctx context.Context, name string) (int64, error)
+
+	// GetAllCounter returns all collected counter metrics.
 	GetAllCounter(ctx context.Context) (map[string]int64, error)
 }
 
 const chunkSize = 3
 
+// Sender consists data to send metrics
 type Sender struct {
+
+	// ReportInterval - interval to send metrics
 	ReportInterval time.Duration
-	ServerAddr     string
-	Done           <-chan struct{}
-	Storage        MetricsStorage
-	Client         *resty.Client
-	UseHash        bool
-	Key            string
-	RateLimit      int
+
+	// ServerAddr - server address
+	ServerAddr string
+
+	Done <-chan struct{}
+
+	// Storage - storage to get metrics
+	Storage MetricsStorage
+
+	// Client - resty http client
+	Client *resty.Client
+
+	// UseHash - if true, payload will be signed with te Key.
+	UseHash bool
+
+	// Key - key to sign payload
+	Key string
+
+	// RateLimit - server rate limit
+	RateLimit int
 }
 
 type job struct {
@@ -66,6 +88,7 @@ var retryDelays = map[uint]time.Duration{
 	2: 5 * time.Second,
 }
 
+// New creates the Sender
 func New(cfg *config.AgentConfig, s MetricsStorage) *Sender {
 	return &Sender{
 		ReportInterval: cfg.ReportInterval,
@@ -78,6 +101,7 @@ func New(cfg *config.AgentConfig, s MetricsStorage) *Sender {
 	}
 }
 
+// Run starts the Sender to send metrics
 func (s *Sender) Run() {
 	tick := time.NewTicker(s.ReportInterval * time.Second)
 	defer tick.Stop()
@@ -87,12 +111,12 @@ func (s *Sender) Run() {
 		case <-s.Done:
 			return
 		case <-tick.C:
-			s.SendMetrics()
+			s.sendMetrics()
 		}
 	}
 }
 
-func (s *Sender) SendMetrics() {
+func (s *Sender) sendMetrics() {
 	ctx := context.Background()
 	g, err := s.Storage.GetAllGauge(ctx)
 	if err != nil {

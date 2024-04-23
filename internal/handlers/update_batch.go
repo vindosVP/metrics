@@ -10,6 +10,7 @@ import (
 	"github.com/vindosVP/metrics/pkg/logger"
 )
 
+// UpdateBatch updates values of all provided metrics.
 func UpdateBatch(s MetricsStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 

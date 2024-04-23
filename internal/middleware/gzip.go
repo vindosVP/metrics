@@ -1,3 +1,4 @@
+// Package middleware consists of middlewares for the http server
 package middleware
 
 import (
@@ -10,6 +11,7 @@ import (
 	"github.com/vindosVP/metrics/pkg/logger"
 )
 
+// Decompress decompresses the request body if request has the Content-Encoding header set with gzip.
 func Decompress(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 

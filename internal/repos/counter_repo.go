@@ -5,15 +5,19 @@ import (
 	"sync"
 )
 
+// CounterRepo - repository to store metrics with counter type.
 type CounterRepo struct {
 	metrics map[string]int64
 	sync.Mutex
 }
 
+// NewCounterRepo creates CounterRepo.
 func NewCounterRepo() *CounterRepo {
 	return &CounterRepo{metrics: make(map[string]int64)}
 }
 
+// Update method updates metric with a new value.
+// new value adds to the old one.
 func (c *CounterRepo) Update(ctx context.Context, name string, v int64) (int64, error) {
 	c.Lock()
 	currentV, ok := c.metrics[name]
@@ -30,6 +34,7 @@ func (c *CounterRepo) Update(ctx context.Context, name string, v int64) (int64, 
 
 }
 
+// Get method returns counter metric value
 func (c *CounterRepo) Get(ctx context.Context, name string) (int64, error) {
 	c.Lock()
 	v, ok := c.metrics[name]
@@ -41,6 +46,7 @@ func (c *CounterRepo) Get(ctx context.Context, name string) (int64, error) {
 	return v, nil
 }
 
+// GetAll method returns values for all collected counter metrics
 func (c *CounterRepo) GetAll(ctx context.Context) (map[string]int64, error) {
 	c.Lock()
 	metrics := make(map[string]int64, len(c.metrics))
@@ -51,6 +57,8 @@ func (c *CounterRepo) GetAll(ctx context.Context) (map[string]int64, error) {
 	return metrics, nil
 }
 
+// Set method sets metric value to a new one.
+// new value replaces the old one.
 func (c *CounterRepo) Set(ctx context.Context, name string, v int64) (int64, error) {
 	c.Lock()
 	c.metrics[name] = v

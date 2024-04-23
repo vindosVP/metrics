@@ -1,3 +1,4 @@
+// Package server is used to start the http-server to collect metrics
 package server
 
 import (
@@ -23,6 +24,8 @@ import (
 	"github.com/vindosVP/metrics/pkg/logger"
 )
 
+// MetricsStorage consists methods to save and get data from the storage
+//
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=MetricsStorage
 type MetricsStorage interface {
 	UpdateGauge(ctx context.Context, name string, v float64) (float64, error)
@@ -35,6 +38,7 @@ type MetricsStorage interface {
 	InsertBatch(ctx context.Context, batch []*models.Metrics) error
 }
 
+// Run starts the http server
 func Run(cfg *config.ServerConfig) error {
 	useDatabase := cfg.DatabaseDNS != ""
 	var mux *chi.Mux

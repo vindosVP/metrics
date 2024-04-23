@@ -24,6 +24,7 @@ type MetricsStorage interface {
 	InsertBatch(ctx context.Context, batch []*models.Metrics) error
 }
 
+// UpdateBody updates values of provided in json format metric.
 func UpdateBody(s MetricsStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 
