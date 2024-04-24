@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -9,9 +10,27 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/vindosVP/metrics/cmd/server/config"
 	"github.com/vindosVP/metrics/internal/repos"
 	"github.com/vindosVP/metrics/internal/storage/memstorage"
 )
+
+func ExampleUpdateBatch() {
+	// create new router
+	r := chi.NewRouter()
+
+	// init server config
+	cfg := config.NewServerConfig()
+
+	// create storage
+	s := memstorage.New(repos.NewGaugeRepo(), repos.NewCounterRepo())
+
+	// register handler
+	r.Post("/updates/", UpdateBatch(s))
+
+	// start server
+	log.Fatal(http.ListenAndServe(cfg.RunAddr, r))
+}
 
 func TestUpdateBatch(t *testing.T) {
 

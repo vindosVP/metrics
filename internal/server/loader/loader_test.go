@@ -3,6 +3,7 @@ package loader
 import (
 	"context"
 	"encoding/json"
+	"math/rand"
 	"os"
 	"reflect"
 	"testing"
@@ -12,8 +13,38 @@ import (
 
 	"github.com/vindosVP/metrics/internal/models"
 	"github.com/vindosVP/metrics/internal/repos"
+	"github.com/vindosVP/metrics/internal/storage/filestorage"
 	"github.com/vindosVP/metrics/internal/storage/memstorage"
 )
+
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func RandStringRunes(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
+}
+
+func BenchmarkLoader_LoadMetrics(b *testing.B) {
+
+	ctx := context.Background()
+	fName := "./bench-db.json"
+	s := filestorage.NewFileStorage(repos.NewGaugeRepo(), repos.NewCounterRepo(), fName)
+	defer os.Remove(fName)
+
+	for i := 0; i < 100; i++ {
+		s.UpdateCounter(ctx, RandStringRunes(10), rand.Int63())
+		s.UpdateGauge(ctx, RandStringRunes(10), rand.Float64())
+	}
+	l := New(fName, s)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		l.LoadMetrics()
+	}
+}
 
 func TestLoader(t *testing.T) {
 	cMetrics := map[string]int64{

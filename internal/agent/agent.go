@@ -18,7 +18,7 @@ func Run(cfg *config.AgentConfig) error {
 	gRepo := repos.NewGaugeRepo()
 	storage := memstorage.New(gRepo, cRepo)
 
-	c := collector.New(cfg, storage)
+	c := collector.New(cfg.PollInterval, storage)
 	s := sender.New(cfg, storage)
 
 	wg := sync.WaitGroup{}

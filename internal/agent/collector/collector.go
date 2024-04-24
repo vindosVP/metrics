@@ -11,7 +11,6 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"
 	"go.uber.org/zap"
 
-	"github.com/vindosVP/metrics/cmd/agent/config"
 	"github.com/vindosVP/metrics/pkg/logger"
 )
 
@@ -41,9 +40,9 @@ type MetricsStorage interface {
 }
 
 // New creates Collector.
-func New(cfg *config.AgentConfig, s MetricsStorage) *Collector {
+func New(p time.Duration, s MetricsStorage) *Collector {
 	return &Collector{
-		PollInterval: cfg.PollInterval,
+		PollInterval: p,
 		Storage:      s,
 	}
 }
