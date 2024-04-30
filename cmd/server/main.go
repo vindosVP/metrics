@@ -21,16 +21,3 @@ func main() {
 		logger.Log.Fatal(fmt.Sprintf("Failed to start server: %v", err))
 	}
 }
-
-//func writeMemProfile() {
-//	time.Sleep(60 * time.Second)
-//	fmem, err := os.Create(`base.pprof`)
-//	if err != nil {
-//		panic(err)
-//	}
-//	defer fmem.Close()
-//	runtime.GC() // получаем статистику по использованию памяти
-//	if err := pprof.WriteHeapProfile(fmem); err != nil {
-//		panic(err)
-//	}
-//}
