@@ -14,20 +14,20 @@ type ServerConfig struct {
 	RunAddr         string
 	LogLevel        string
 	FileStoragePath string
-	Restore         bool
-	StoreInterval   time.Duration
 	DatabaseDNS     string
 	Key             string
+	StoreInterval   time.Duration
+	Restore         bool
 }
 
 type tempConfig struct {
 	RunAddr         string `env:"ADDRESS"`
 	LogLevel        string `env:"LOG_LEVEL"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
-	Restore         bool
-	StoreInterval   int
 	DatabaseDNS     string `env:"DATABASE_DSN"`
 	Key             string `env:"KEY"`
+	StoreInterval   int
+	Restore         bool
 }
 
 func NewServerConfig() *ServerConfig {

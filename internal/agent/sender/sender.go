@@ -43,43 +43,28 @@ const chunkSize = 3
 
 // Sender consists data to send metrics
 type Sender struct {
-
-	// ReportInterval - interval to send metrics
+	Storage        MetricsStorage
+	Done           <-chan struct{}
+	Client         *resty.Client
+	ServerAddr     string
+	Key            string
 	ReportInterval time.Duration
-
-	// ServerAddr - server address
-	ServerAddr string
-
-	Done <-chan struct{}
-
-	// Storage - storage to get metrics
-	Storage MetricsStorage
-
-	// Client - resty http client
-	Client *resty.Client
-
-	// UseHash - if true, payload will be signed with te Key.
-	UseHash bool
-
-	// Key - key to sign payload
-	Key string
-
-	// RateLimit - server rate limit
-	RateLimit int
+	RateLimit      int
+	UseHash        bool
 }
 
 type job struct {
-	id      int
-	url     string
-	metrics []*models.Metrics
-	useHash bool
-	key     string
 	client  *resty.Client
+	url     string
+	key     string
+	metrics []*models.Metrics
+	id      int
+	useHash bool
 }
 
 type result struct {
-	id  int
 	err error
+	id  int
 }
 
 var retryDelays = map[uint]time.Duration{
@@ -194,7 +179,7 @@ func startWorkers(jobs <-chan job, results chan<- result, workers int) {
 func worker(jobs <-chan job, results chan<- result, wg *sync.WaitGroup) {
 	for j := range jobs {
 		err := send(j.client, j.url, j.metrics, j.useHash, j.key)
-		results <- result{j.id, err}
+		results <- result{err, j.id}
 	}
 	wg.Done()
 }

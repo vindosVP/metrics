@@ -60,13 +60,13 @@ func BenchmarkCounterRepo_GetAll(b *testing.B) {
 
 func TestCounterRepo_Update(t *testing.T) {
 	tests := []struct {
-		name            string
+		errValue        error
 		existingMetrics map[string]int64
+		name            string
 		metricName      string
 		metricValue     int64
 		wantValue       int64
 		wantErr         bool
-		errValue        error
 	}{
 		{
 			name:            "empty metrics",
@@ -127,13 +127,13 @@ func TestCounterRepo_Update(t *testing.T) {
 
 func TestCounterRepo_Set(t *testing.T) {
 	tests := []struct {
-		name            string
+		errValue        error
 		existingMetrics map[string]int64
+		name            string
 		metricName      string
 		metricValue     int64
 		wantValue       int64
 		wantErr         bool
-		errValue        error
 	}{
 		{
 			name:            "empty metrics",
@@ -194,12 +194,12 @@ func TestCounterRepo_Set(t *testing.T) {
 
 func TestCounterRepo_Get(t *testing.T) {
 	tests := []struct {
-		name            string
+		errValue        error
 		existingMetrics map[string]int64
+		name            string
 		metricName      string
 		wantValue       int64
 		wantErr         bool
-		errValue        error
 	}{
 		{
 			name: "metric registered",
@@ -233,9 +233,9 @@ func TestCounterRepo_Get(t *testing.T) {
 
 func TestCounterRepo_GetAll(t *testing.T) {
 	tests := []struct {
-		name    string
 		metrics map[string]int64
 		want    map[string]int64
+		name    string
 	}{
 		{
 			name:    "empty",

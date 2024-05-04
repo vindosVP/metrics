@@ -34,8 +34,8 @@ func ExampleUpdate() {
 func TestUpdate(t *testing.T) {
 
 	type want struct {
-		code        int
 		contentType string
+		code        int
 	}
 
 	tests := []struct {

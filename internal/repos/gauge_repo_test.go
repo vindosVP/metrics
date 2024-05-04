@@ -47,13 +47,13 @@ func BenchmarkGaugeRepo_GetAll(b *testing.B) {
 
 func TestGaugeRepo_Update(t *testing.T) {
 	tests := []struct {
-		name            string
+		errValue        error
 		existingMetrics map[string]float64
+		name            string
 		metricName      string
 		metricValue     float64
 		wantValue       float64
 		wantErr         bool
-		errValue        error
 	}{
 		{
 			name:            "empty metrics",
@@ -105,12 +105,12 @@ func TestGaugeRepo_Update(t *testing.T) {
 
 func TestGaugeRepo_Get(t *testing.T) {
 	tests := []struct {
-		name            string
+		errValue        error
 		existingMetrics map[string]float64
+		name            string
 		metricName      string
 		wantValue       float64
 		wantErr         bool
-		errValue        error
 	}{
 		{
 			name: "metric registered",
@@ -144,9 +144,9 @@ func TestGaugeRepo_Get(t *testing.T) {
 
 func TestGaugeRepo_GetAll(t *testing.T) {
 	tests := []struct {
-		name    string
 		metrics map[string]float64
 		want    map[string]float64
+		name    string
 	}{
 		{
 			name:    "empty",

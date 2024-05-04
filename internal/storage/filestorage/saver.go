@@ -23,10 +23,10 @@ type MetricsStorage interface {
 
 // Saver consists data to save metrics dump
 type Saver struct {
+	Storage       MetricsStorage
+	Done          <-chan struct{}
 	FileName      string
 	StoreInterval time.Duration
-	Done          <-chan struct{}
-	Storage       MetricsStorage
 }
 
 // NewSaver creates the Saver

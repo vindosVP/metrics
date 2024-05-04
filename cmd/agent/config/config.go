@@ -10,19 +10,19 @@ import (
 
 type AgentConfig struct {
 	ServerAddr     string
-	PollInterval   time.Duration
-	ReportInterval time.Duration
 	LogLevel       string
 	Key            string
 	RateLimit      int
+	PollInterval   time.Duration
+	ReportInterval time.Duration
 }
 
 type tempConfig struct {
 	ServerAddr     string `env:"ADDRESS"`
-	PollInterval   int    `env:"POLL_INTERVAL"`
-	ReportInterval int    `env:"REPORT_INTERVAL"`
 	LogLevel       string `env:"LOG_LEVEL"`
 	Key            string `env:"KEY"`
+	PollInterval   int    `env:"POLL_INTERVAL"`
+	ReportInterval int    `env:"REPORT_INTERVAL"`
 	RateLimit      int    `env:"RATE_LIMIT"`
 }
 

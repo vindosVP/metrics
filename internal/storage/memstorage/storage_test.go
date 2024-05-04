@@ -14,14 +14,14 @@ import (
 func TestStorage_UpdateCounter(t *testing.T) {
 	unexpectedError := errors.New("unexpected error")
 	tests := []struct {
-		name        string
-		mockValue   int64
 		mockErr     error
+		errValue    error
+		name        string
 		metricName  string
+		mockValue   int64
 		metricValue int64
 		wantValue   int64
 		wantErr     bool
-		errValue    error
 	}{
 		{
 			name:        "ok",
@@ -65,14 +65,14 @@ func TestStorage_UpdateCounter(t *testing.T) {
 func TestStorage_SetCounter(t *testing.T) {
 	unexpectedError := errors.New("unexpected error")
 	tests := []struct {
-		name        string
-		mockValue   int64
 		mockErr     error
+		errValue    error
+		name        string
 		metricName  string
+		mockValue   int64
 		metricValue int64
 		wantValue   int64
 		wantErr     bool
-		errValue    error
 	}{
 		{
 			name:        "ok",
@@ -116,14 +116,14 @@ func TestStorage_SetCounter(t *testing.T) {
 func TestStorage_UpdateGauge(t *testing.T) {
 	unexpectedError := errors.New("unexpected error")
 	tests := []struct {
-		name        string
-		mockValue   float64
 		mockErr     error
+		errValue    error
+		name        string
 		metricName  string
+		mockValue   float64
 		metricValue float64
 		wantValue   float64
 		wantErr     bool
-		errValue    error
 	}{
 		{
 			name:        "ok",
@@ -167,13 +167,13 @@ func TestStorage_UpdateGauge(t *testing.T) {
 func TestStorage_GetGauge(t *testing.T) {
 	unexpectedError := errors.New("unexpected error")
 	tests := []struct {
-		name       string
-		mockValue  float64
 		mockErr    error
+		errValue   error
+		name       string
 		metricName string
+		mockValue  float64
 		wantValue  float64
 		wantErr    bool
-		errValue   error
 	}{
 		{
 			name:       "ok",
@@ -216,13 +216,13 @@ func TestStorage_GetGauge(t *testing.T) {
 func TestStorage_GetCounter(t *testing.T) {
 	unexpectedError := errors.New("unexpected error")
 	tests := []struct {
-		name       string
-		mockValue  int64
 		mockErr    error
+		errValue   error
+		name       string
 		metricName string
+		mockValue  int64
 		wantValue  int64
 		wantErr    bool
-		errValue   error
 	}{
 		{
 			name:       "ok",
@@ -265,11 +265,11 @@ func TestStorage_GetCounter(t *testing.T) {
 func TestStorage_GetAllGauge(t *testing.T) {
 	unexpectedError := errors.New("unexpected error")
 	tests := []struct {
-		name        string
+		errValue    error
 		mockMetrics map[string]float64
 		wantMetrics map[string]float64
+		name        string
 		wantErr     bool
-		errValue    error
 	}{
 		{
 			name:        "empty",
@@ -322,11 +322,11 @@ func TestStorage_GetAllGauge(t *testing.T) {
 func TestStorage_GetAllCounter(t *testing.T) {
 	unexpectedError := errors.New("unexpected error")
 	tests := []struct {
-		name        string
+		errValue    error
 		mockMetrics map[string]int64
 		wantMetrics map[string]int64
+		name        string
 		wantErr     bool
-		errValue    error
 	}{
 		{
 			name:        "empty",

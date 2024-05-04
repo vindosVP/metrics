@@ -35,8 +35,8 @@ func ExampleUpdateBatch() {
 func TestUpdateBatch(t *testing.T) {
 
 	type want struct {
-		code        int
 		contentType string
+		code        int
 	}
 
 	tests := []struct {

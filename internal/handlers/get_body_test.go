@@ -40,31 +40,31 @@ func ExampleGetBody() {
 
 func TestGetBody(t *testing.T) {
 	type mockGauge struct {
-		needed bool
+		err    error
 		name   string
 		value  float64
-		err    error
+		needed bool
 	}
 	type mockCounter struct {
-		needed bool
+		err    error
 		name   string
 		value  int64
-		err    error
+		needed bool
 	}
 	type want struct {
-		code        int
 		body        string
 		contentType string
+		code        int
 	}
 	unexpectedError := errors.New("unexpected error")
 
 	tests := []struct {
 		name        string
-		mockGauge   mockGauge
-		mockCounter mockCounter
 		body        string
 		method      string
 		want        want
+		mockGauge   mockGauge
+		mockCounter mockCounter
 	}{
 		{
 			name: "wrong metric type",
@@ -216,7 +216,7 @@ func TestGetBody(t *testing.T) {
 			method: http.MethodPost,
 			want: want{
 				code:        http.StatusOK,
-				body:        "{\"id\":\"test\",\"type\":\"gauge\",\"value\":122.44}",
+				body:        "{\"value\":122.44,\"id\":\"test\",\"type\":\"gauge\"}",
 				contentType: "application/json",
 			},
 		},
@@ -238,7 +238,7 @@ func TestGetBody(t *testing.T) {
 			method: http.MethodPost,
 			want: want{
 				code:        http.StatusOK,
-				body:        "{\"id\":\"test\",\"type\":\"counter\",\"delta\":111}",
+				body:        "{\"delta\":111,\"id\":\"test\",\"type\":\"counter\"}",
 				contentType: "application/json",
 			},
 		},
