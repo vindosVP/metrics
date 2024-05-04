@@ -1,21 +1,27 @@
+// Package filestorage is a package to save metrics values to inmemory storage and json file
 package filestorage
 
 import (
 	"context"
 	"encoding/json"
-	"github.com/vindosVP/metrics/internal/models"
-	"github.com/vindosVP/metrics/pkg/logger"
-	"go.uber.org/zap"
 	"os"
 	"time"
+
+	"go.uber.org/zap"
+
+	"github.com/vindosVP/metrics/internal/models"
+	"github.com/vindosVP/metrics/pkg/logger"
 )
 
+// MetricsStorage consists of methods to get metrics values from the storage
+//
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=MetricsStorage
 type MetricsStorage interface {
 	GetAllGauge(ctx context.Context) (map[string]float64, error)
 	GetAllCounter(ctx context.Context) (map[string]int64, error)
 }
 
+// Saver consists data to save metrics dump
 type Saver struct {
 	FileName      string
 	StoreInterval time.Duration
@@ -23,6 +29,7 @@ type Saver struct {
 	Storage       MetricsStorage
 }
 
+// NewSaver creates the Saver
 func NewSaver(filename string, storeInterval time.Duration, s MetricsStorage) *Saver {
 	return &Saver{
 		FileName:      filename,
@@ -31,12 +38,15 @@ func NewSaver(filename string, storeInterval time.Duration, s MetricsStorage) *S
 	}
 }
 
+// Stop method stops the Saver
 func (s *Saver) Stop() {
 	done := make(chan struct{})
 	s.Done = done
 	close(done)
 }
 
+// Run starts the Saver.
+// Saver will get metrics from the storage and write them to the json file every n seconds.
 func (s *Saver) Run() {
 	tick := time.NewTicker(s.StoreInterval * time.Second)
 	defer tick.Stop()
@@ -46,12 +56,12 @@ func (s *Saver) Run() {
 		case <-s.Done:
 			return
 		case <-tick.C:
-			s.Save()
+			s.save()
 		}
 	}
 }
 
-func (s *Saver) Save() {
+func (s *Saver) save() {
 	ctx := context.Background()
 	gMetrics, err := s.Storage.GetAllGauge(ctx)
 	if err != nil {
@@ -65,6 +75,7 @@ func (s *Saver) Save() {
 	WriteMetrics(cMetrics, gMetrics, s.FileName)
 }
 
+// WriteMetrics saves metrics values to file
 func WriteMetrics(cMetrics map[string]int64, gMetrics map[string]float64, fileName string) {
 	metrics := make([]*models.Metrics, len(gMetrics)+len(cMetrics))
 	i := 0

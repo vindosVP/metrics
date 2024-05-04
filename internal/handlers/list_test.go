@@ -2,14 +2,37 @@ package handlers
 
 import (
 	"errors"
-	"github.com/go-chi/chi/v5"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/vindosVP/metrics/internal/handlers/mocks"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+
+	"github.com/vindosVP/metrics/cmd/server/config"
+	"github.com/vindosVP/metrics/internal/handlers/mocks"
+	"github.com/vindosVP/metrics/internal/repos"
+	"github.com/vindosVP/metrics/internal/storage/memstorage"
 )
+
+func ExampleList() {
+	// create new router
+	r := chi.NewRouter()
+
+	// init server config
+	cfg := config.NewServerConfig()
+
+	// create storage
+	s := memstorage.New(repos.NewGaugeRepo(), repos.NewCounterRepo())
+
+	// register handler
+	r.Get("/", List(s))
+
+	// start server
+	log.Fatal(http.ListenAndServe(cfg.RunAddr, r))
+}
 
 func TestList(t *testing.T) {
 	type mockGauge struct {

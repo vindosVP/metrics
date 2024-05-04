@@ -2,10 +2,61 @@ package repos
 
 import (
 	"context"
+	"math/rand"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
+
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func BenchmarkCounterRepo_Update(b *testing.B) {
+	c := NewCounterRepo()
+	ctx := context.Background()
+	v := rand.Int63()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		c.Update(ctx, "Name", v)
+	}
+}
+
+func BenchmarkCounterRepo_Set(b *testing.B) {
+	c := NewCounterRepo()
+	ctx := context.Background()
+	v := rand.Int63()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		c.Set(ctx, "Name", v)
+	}
+}
+
+func BenchmarkCounterRepo_Get(b *testing.B) {
+	c := NewCounterRepo()
+	ctx := context.Background()
+	v := rand.Int63()
+	c.Update(ctx, "Name", v)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		c.Get(ctx, "Name")
+	}
+}
+
+func BenchmarkCounterRepo_GetAll(b *testing.B) {
+	c := NewCounterRepo()
+	ctx := context.Background()
+	for i := 0; i < 100; i++ {
+		c.Update(ctx, RandStringRunes(10), rand.Int63())
+	}
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		c.GetAll(ctx)
+	}
+}
 
 func TestCounterRepo_Update(t *testing.T) {
 	tests := []struct {
@@ -213,4 +264,12 @@ func TestCounterRepo_GetAll(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func RandStringRunes(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
 }

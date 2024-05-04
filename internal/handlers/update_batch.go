@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/http"
+
 	"github.com/vindosVP/metrics/internal/models"
 	"github.com/vindosVP/metrics/pkg/logger"
-	"net/http"
 )
 
+// UpdateBatch updates values of all provided metrics.
 func UpdateBatch(s MetricsStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 

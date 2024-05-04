@@ -1,14 +1,17 @@
 package handlers
 
 import (
-	"github.com/go-chi/chi/v5"
-	"github.com/vindosVP/metrics/internal/models"
-	"github.com/vindosVP/metrics/pkg/logger"
-	"go.uber.org/zap"
 	"net/http"
 	"strconv"
+
+	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
+
+	"github.com/vindosVP/metrics/internal/models"
+	"github.com/vindosVP/metrics/pkg/logger"
 )
 
+// Update updates value of provided metric.
 func Update(s MetricsStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 

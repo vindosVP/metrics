@@ -1,41 +1,53 @@
+// Package collector collects metrics every n seconds.
 package collector
 
 import (
 	"context"
-	"github.com/shirou/gopsutil/v3/cpu"
-	"github.com/shirou/gopsutil/v3/mem"
-	"github.com/vindosVP/metrics/cmd/agent/config"
-	"github.com/vindosVP/metrics/pkg/logger"
-	"go.uber.org/zap"
 	"math/rand"
 	"runtime"
 	"time"
+
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
+	"go.uber.org/zap"
+
+	"github.com/vindosVP/metrics/pkg/logger"
 )
 
+// Collector consists data to collect metrics.
 type Collector struct {
+	// PollInterval - interval to collect metrics.
 	PollInterval time.Duration
-	Done         <-chan struct{}
-	Storage      MetricsStorage
+
+	Done <-chan struct{}
+
+	// Storage - storage to store metrics.
+	Storage MetricsStorage
 }
 
+// MetricsStorage consists of methods to write and get data from storage.
+//
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=MetricsStorage
 type MetricsStorage interface {
+
+	// UpdateGauge updates gauge metric.
+	// new value replaces the old one.
 	UpdateGauge(ctx context.Context, name string, v float64) (float64, error)
+
+	// UpdateCounter updates counter metric.
+	// new value adds to the old one.
 	UpdateCounter(ctx context.Context, name string, v int64) (int64, error)
-	SetCounter(ctx context.Context, name string, v int64) (int64, error)
-	GetGauge(ctx context.Context, name string) (float64, error)
-	GetAllGauge(ctx context.Context) (map[string]float64, error)
-	GetCounter(ctx context.Context, name string) (int64, error)
-	GetAllCounter(ctx context.Context) (map[string]int64, error)
 }
 
-func New(cfg *config.AgentConfig, s MetricsStorage) *Collector {
+// New creates Collector.
+func New(p time.Duration, s MetricsStorage) *Collector {
 	return &Collector{
-		PollInterval: cfg.PollInterval,
+		PollInterval: p,
 		Storage:      s,
 	}
 }
 
+// Run starts the collector.
 func (c *Collector) Run() {
 	tick := time.NewTicker(c.PollInterval * time.Second)
 	defer tick.Stop()
@@ -45,12 +57,12 @@ func (c *Collector) Run() {
 		case <-c.Done:
 			return
 		case <-tick.C:
-			c.CollectMetrics()
+			c.collectMetrics()
 		}
 	}
 }
 
-func (c *Collector) CollectMetrics() {
+func (c *Collector) collectMetrics() {
 	c.collectCounters()
 	c.collectGauges()
 	logger.Log.Info("Metrics collected")

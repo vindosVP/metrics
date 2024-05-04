@@ -2,14 +2,23 @@ package collector
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/vindosVP/metrics/cmd/agent/config"
-	"github.com/vindosVP/metrics/internal/repos"
-	"github.com/vindosVP/metrics/internal/storage/memstorage"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/vindosVP/metrics/internal/repos"
+	"github.com/vindosVP/metrics/internal/storage/memstorage"
 )
+
+func BenchmarkCollectorCollectMetrics(b *testing.B) {
+	c := New(10*time.Second, memstorage.New(repos.NewGaugeRepo(), repos.NewCounterRepo()))
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		c.collectMetrics()
+	}
+}
 
 func TestCollector(t *testing.T) {
 	if testing.Short() {
@@ -19,11 +28,10 @@ func TestCollector(t *testing.T) {
 	done := make(chan struct{})
 	collectorShutdown := make(chan struct{})
 
-	cfg := config.NewAgentConfig()
 	cRepo := repos.NewCounterRepo()
 	gRepo := repos.NewGaugeRepo()
 	storage := memstorage.New(gRepo, cRepo)
-	c := New(cfg, storage)
+	c := New(10*time.Second, storage)
 	c.Done = done
 	c.PollInterval = 1
 

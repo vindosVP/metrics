@@ -1,3 +1,4 @@
+// Package utils consists some useful methods
 package utils
 
 import (
@@ -6,6 +7,7 @@ import (
 	"encoding/hex"
 )
 
+// Sha256Hash method returns the Sha256 hash of provided data
 func Sha256Hash(data []byte, key string) (string, error) {
 	keyBytes := []byte(key)
 	h := hmac.New(sha256.New, keyBytes)

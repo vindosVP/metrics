@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"net/http"
+
+	"go.uber.org/zap"
+
 	"github.com/vindosVP/metrics/internal/models"
 	"github.com/vindosVP/metrics/pkg/logger"
-	"go.uber.org/zap"
-	"net/http"
 )
 
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=MetricsStorage
@@ -22,6 +24,7 @@ type MetricsStorage interface {
 	InsertBatch(ctx context.Context, batch []*models.Metrics) error
 }
 
+// UpdateBody updates values of provided in json format metric.
 func UpdateBody(s MetricsStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 

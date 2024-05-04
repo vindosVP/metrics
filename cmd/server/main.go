@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/vindosVP/metrics/cmd/server/config"
 	"github.com/vindosVP/metrics/internal/server"
 	"github.com/vindosVP/metrics/pkg/logger"
-	"log"
 )
 
 func main() {

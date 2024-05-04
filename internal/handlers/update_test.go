@@ -1,14 +1,35 @@
 package handlers
 
 import (
-	"github.com/go-chi/chi/v5"
-	"github.com/stretchr/testify/assert"
-	"github.com/vindosVP/metrics/internal/repos"
-	"github.com/vindosVP/metrics/internal/storage/memstorage"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/vindosVP/metrics/cmd/server/config"
+	"github.com/vindosVP/metrics/internal/repos"
+	"github.com/vindosVP/metrics/internal/storage/memstorage"
 )
+
+func ExampleUpdate() {
+	// create new router
+	r := chi.NewRouter()
+
+	// init server config
+	cfg := config.NewServerConfig()
+
+	// create storage
+	s := memstorage.New(repos.NewGaugeRepo(), repos.NewCounterRepo())
+
+	// register handler
+	r.Post("/update/{type}/{name}/{value}", UpdateBody(s))
+
+	// start server
+	log.Fatal(http.ListenAndServe(cfg.RunAddr, r))
+}
 
 func TestUpdate(t *testing.T) {
 

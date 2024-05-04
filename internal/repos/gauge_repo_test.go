@@ -2,10 +2,48 @@ package repos
 
 import (
 	"context"
+	"math/rand"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
+
+func BenchmarkGaugeRepo_Update(b *testing.B) {
+	g := NewGaugeRepo()
+	ctx := context.Background()
+	v := rand.Float64()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		g.Update(ctx, "Name", v)
+	}
+}
+
+func BenchmarkGaugeRepo_Get(b *testing.B) {
+	g := NewGaugeRepo()
+	ctx := context.Background()
+	v := rand.Float64()
+	g.Update(ctx, "Name", v)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		g.Get(ctx, "Name")
+	}
+}
+
+func BenchmarkGaugeRepo_GetAll(b *testing.B) {
+	g := NewGaugeRepo()
+	ctx := context.Background()
+	for i := 0; i < 100; i++ {
+		g.Update(ctx, RandStringRunes(10), rand.Float64())
+	}
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		g.GetAll(ctx)
+	}
+}
 
 func TestGaugeRepo_Update(t *testing.T) {
 	tests := []struct {

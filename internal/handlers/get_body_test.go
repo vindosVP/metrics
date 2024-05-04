@@ -2,18 +2,41 @@ package handlers
 
 import (
 	"errors"
-	"github.com/go-chi/chi/v5"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
-	"github.com/vindosVP/metrics/internal/handlers/mocks"
-	"github.com/vindosVP/metrics/internal/storage"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+
+	"github.com/vindosVP/metrics/cmd/server/config"
+	"github.com/vindosVP/metrics/internal/handlers/mocks"
+	"github.com/vindosVP/metrics/internal/repos"
+	"github.com/vindosVP/metrics/internal/storage"
+	"github.com/vindosVP/metrics/internal/storage/memstorage"
 )
+
+func ExampleGetBody() {
+	// create new router
+	r := chi.NewRouter()
+
+	// init server config
+	cfg := config.NewServerConfig()
+
+	// create storage
+	s := memstorage.New(repos.NewGaugeRepo(), repos.NewCounterRepo())
+
+	// register handler
+	r.Post("/value/", GetBody(s))
+
+	// start server
+	log.Fatal(http.ListenAndServe(cfg.RunAddr, r))
+}
 
 func TestGetBody(t *testing.T) {
 	type mockGauge struct {

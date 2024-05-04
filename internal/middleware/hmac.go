@@ -2,23 +2,28 @@ package middleware
 
 import (
 	"bytes"
-	"github.com/vindosVP/metrics/pkg/logger"
-	"github.com/vindosVP/metrics/pkg/utils"
-	"go.uber.org/zap"
 	"io"
 	"net/http"
+
+	"go.uber.org/zap"
+
+	"github.com/vindosVP/metrics/pkg/logger"
+	"github.com/vindosVP/metrics/pkg/utils"
 )
 
+// ValidateHMAC returns handler to validate requests HMAC.
 func ValidateHMAC(key string) func(next http.Handler) http.Handler {
 	h := NewHasher(key)
 	return h.ValidateHandler
 }
 
+// Sign returns sign handler.
 func Sign(key string) func(next http.Handler) http.Handler {
 	h := NewHasher(key)
 	return h.SignHandler
 }
 
+// Hasher consist key to sign data.
 type Hasher struct {
 	key string
 }
@@ -50,10 +55,12 @@ func (r *responseSigner) WriteHeader(code int) {
 	r.w.WriteHeader(code)
 }
 
+// NewHasher creates Hasher.
 func NewHasher(key string) *Hasher {
 	return &Hasher{key: key}
 }
 
+// SignHandler returns handler that replaces the original ResponseWriter with the responseSigner.
 func (h *Hasher) SignHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if h.key != "" {
@@ -70,6 +77,7 @@ func (h *Hasher) SignHandler(next http.Handler) http.Handler {
 	})
 }
 
+// ValidateHandler returns handler that compares calculated hash with HashSHA256 header.
 func (h *Hasher) ValidateHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if h.key != "" {
