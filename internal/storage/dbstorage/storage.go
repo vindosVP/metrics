@@ -52,13 +52,13 @@ func (s *Storage) InsertBatch(ctx context.Context, batch []*models.Metrics) erro
 			switch metric.MType {
 			case models.Counter:
 				val := *metric.Delta
-				if _, err := tx.Exec(ctx, counterQuery, metric.ID, val); err != nil {
-					return err
+				if _, cerr := tx.Exec(ctx, counterQuery, metric.ID, val); cerr != nil {
+					return cerr
 				}
 			case models.Gauge:
 				val := *metric.Value
-				if _, err := tx.Exec(ctx, gaugeQuery, metric.ID, val); err != nil {
-					return err
+				if _, gerr := tx.Exec(ctx, gaugeQuery, metric.ID, val); gerr != nil {
+					return gerr
 				}
 			}
 		}
@@ -143,9 +143,9 @@ func (s *Storage) GetAllGauge(ctx context.Context) (map[string]float64, error) {
 		for rows.Next() {
 			var id string
 			var value float64
-			err := rows.Scan(&id, &value)
-			if err != nil {
-				return nil, err
+			rerr := rows.Scan(&id, &value)
+			if rerr != nil {
+				return nil, rerr
 			}
 			res[id] = value
 		}
@@ -170,9 +170,9 @@ func (s *Storage) GetAllCounter(ctx context.Context) (map[string]int64, error) {
 		for rows.Next() {
 			var id string
 			var value int64
-			err := rows.Scan(&id, &value)
-			if err != nil {
-				return nil, err
+			rerr := rows.Scan(&id, &value)
+			if rerr != nil {
+				return nil, rerr
 			}
 			res[id] = value
 		}

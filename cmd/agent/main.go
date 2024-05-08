@@ -9,7 +9,14 @@ import (
 	"github.com/vindosVP/metrics/pkg/logger"
 )
 
+var (
+	buildVersion = "N/A"
+	buildDate    = "N/A"
+	buildCommit  = "N/A"
+)
+
 func main() {
+	printBuildInfo()
 	log.Print("Starting agent")
 	cfg := config.NewAgentConfig()
 	err := logger.Initialize(cfg.LogLevel)
@@ -20,4 +27,10 @@ func main() {
 	if err != nil {
 		log.Fatalf(fmt.Sprintf("Failed to start agent: %v", err))
 	}
+}
+
+func printBuildInfo() {
+	fmt.Printf("Build version: %s\n", buildVersion)
+	fmt.Printf("Build date: %s\n", buildDate)
+	fmt.Printf("Build commit: %s\n", buildCommit)
 }

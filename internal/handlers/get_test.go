@@ -39,31 +39,31 @@ func ExampleGet() {
 
 func TestGet(t *testing.T) {
 	type mockGauge struct {
-		needed bool
+		err    error
 		name   string
 		value  float64
-		err    error
+		needed bool
 	}
 	type mockCounter struct {
-		needed bool
+		err    error
 		name   string
 		value  int64
-		err    error
+		needed bool
 	}
 	type want struct {
-		code        int
 		body        string
 		contentType string
+		code        int
 	}
 	unexpectedError := errors.New("unexpected error")
 
 	tests := []struct {
 		name        string
-		mockGauge   mockGauge
-		mockCounter mockCounter
 		url         string
 		method      string
 		want        want
+		mockGauge   mockGauge
+		mockCounter mockCounter
 	}{
 		{
 			name: "wrong metric type",

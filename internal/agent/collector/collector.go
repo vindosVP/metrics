@@ -16,13 +16,13 @@ import (
 
 // Collector consists data to collect metrics.
 type Collector struct {
-	// PollInterval - interval to collect metrics.
-	PollInterval time.Duration
-
 	Done <-chan struct{}
 
 	// Storage - storage to store metrics.
 	Storage MetricsStorage
+
+	// PollInterval - interval to collect metrics.
+	PollInterval time.Duration
 }
 
 // MetricsStorage consists of methods to write and get data from storage.

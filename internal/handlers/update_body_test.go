@@ -37,10 +37,10 @@ func ExampleUpdateBody() {
 func TestUpdateBody(t *testing.T) {
 
 	type want struct {
-		code        int
 		contentType string
-		wantBody    bool
 		body        string
+		code        int
+		wantBody    bool
 	}
 
 	tests := []struct {
@@ -57,7 +57,7 @@ func TestUpdateBody(t *testing.T) {
 				code:        http.StatusOK,
 				contentType: "application/json",
 				wantBody:    true,
-				body:        "{\"id\":\"Alloc\",\"type\":\"gauge\",\"value\":12.5}",
+				body:        "{\"value\":12.5,\"id\":\"Alloc\",\"type\":\"gauge\"}",
 			},
 		},
 		{
@@ -68,7 +68,7 @@ func TestUpdateBody(t *testing.T) {
 				code:        http.StatusOK,
 				contentType: "application/json",
 				wantBody:    true,
-				body:        "{\"id\":\"PollCount\",\"type\":\"counter\",\"delta\":125}",
+				body:        "{\"delta\":125,\"id\":\"PollCount\",\"type\":\"counter\"}",
 			},
 		},
 		{

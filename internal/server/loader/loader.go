@@ -22,8 +22,8 @@ type MetricsStorage interface {
 
 // Loader consists data to load metrics dump
 type Loader struct {
-	filename string
 	storage  MetricsStorage
+	filename string
 }
 
 // New creates the Loader

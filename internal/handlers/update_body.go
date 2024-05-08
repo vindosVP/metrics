@@ -58,11 +58,11 @@ func UpdateBody(s MetricsStorage) http.HandlerFunc {
 		case models.Counter:
 			delta := *metrics.Delta
 			fields = append(fields, zap.Int64("delta", delta))
-			val, err := s.UpdateCounter(req.Context(), metrics.ID, delta)
-			if err != nil {
-				fields = append(fields, zap.Error(err))
+			val, cerr := s.UpdateCounter(req.Context(), metrics.ID, delta)
+			if cerr != nil {
+				fields = append(fields, zap.Error(cerr))
 				logger.Log.Error("Failed to update metric value", fields...)
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				http.Error(w, cerr.Error(), http.StatusInternalServerError)
 				return
 			}
 
@@ -74,11 +74,11 @@ func UpdateBody(s MetricsStorage) http.HandlerFunc {
 		case models.Gauge:
 			value := *metrics.Value
 			fields = append(fields, zap.Float64("value", value))
-			val, err := s.UpdateGauge(req.Context(), metrics.ID, value)
-			if err != nil {
-				fields = append(fields, zap.Error(err))
+			val, gerr := s.UpdateGauge(req.Context(), metrics.ID, value)
+			if gerr != nil {
+				fields = append(fields, zap.Error(gerr))
 				logger.Log.Error("Failed to update metric value", fields...)
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				http.Error(w, gerr.Error(), http.StatusInternalServerError)
 				return
 			}
 

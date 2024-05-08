@@ -30,8 +30,8 @@ type Hasher struct {
 
 type responseSigner struct {
 	w   http.ResponseWriter
-	buf bytes.Buffer
 	key string
+	buf bytes.Buffer
 }
 
 func (r *responseSigner) Write(p []byte) (int, error) {

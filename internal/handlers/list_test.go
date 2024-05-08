@@ -36,18 +36,18 @@ func ExampleList() {
 
 func TestList(t *testing.T) {
 	type mockGauge struct {
-		needed bool
-		fields map[string]float64
 		err    error
+		fields map[string]float64
+		needed bool
 	}
 	type mockCounter struct {
-		needed bool
-		fields map[string]int64
 		err    error
+		fields map[string]int64
+		needed bool
 	}
 	type want struct {
-		code        int
 		contentType string
+		code        int
 	}
 	unexpectedError := errors.New("unexpected error")
 

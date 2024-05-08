@@ -45,16 +45,16 @@ func GetBody(s MetricsStorage) http.HandlerFunc {
 
 		switch metrics.MType {
 		case models.Counter:
-			val, err := s.GetCounter(req.Context(), metrics.ID)
-			if err != nil {
+			val, cerr := s.GetCounter(req.Context(), metrics.ID)
+			if cerr != nil {
 				status = http.StatusInternalServerError
-				if errors.Is(err, storage.ErrMetricNotRegistered) {
+				if errors.Is(cerr, storage.ErrMetricNotRegistered) {
 					status = http.StatusNotFound
 				} else {
-					fields = append(fields, zap.Error(err))
+					fields = append(fields, zap.Error(cerr))
 					logger.Log.Error("Failed to get metric value", fields...)
 				}
-				http.Error(w, err.Error(), status)
+				http.Error(w, cerr.Error(), status)
 				return
 			}
 
@@ -62,16 +62,16 @@ func GetBody(s MetricsStorage) http.HandlerFunc {
 			resp.MType = models.Counter
 			resp.Delta = &val
 		case models.Gauge:
-			val, err := s.GetGauge(req.Context(), metrics.ID)
-			if err != nil {
+			val, gerr := s.GetGauge(req.Context(), metrics.ID)
+			if gerr != nil {
 				status = http.StatusInternalServerError
-				if errors.Is(err, storage.ErrMetricNotRegistered) {
+				if errors.Is(gerr, storage.ErrMetricNotRegistered) {
 					status = http.StatusNotFound
 				} else {
-					fields = append(fields, zap.Error(err))
+					fields = append(fields, zap.Error(gerr))
 					logger.Log.Error("Failed to get metric value", fields...)
 				}
-				http.Error(w, err.Error(), status)
+				http.Error(w, gerr.Error(), status)
 				return
 			}
 
