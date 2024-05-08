@@ -18,8 +18,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		ast.Inspect(file, func(n ast.Node) bool {
 
 			isOsExit := func(n ast.Node) {
-				switch x := n.(type) {
-				case *ast.CallExpr:
+				if x, ok := n.(*ast.CallExpr); ok {
 					if fun, ok := x.Fun.(*ast.SelectorExpr); ok {
 						pkg, isIdent := fun.X.(*ast.Ident)
 						if isIdent && pkg.Name == "os" && fun.Sel.Name == "Exit" {
@@ -30,8 +29,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			}
 
 			isMainFunc := func(n ast.Node) {
-				switch x := n.(type) {
-				case *ast.FuncDecl:
+				if x, ok := n.(*ast.FuncDecl); ok {
 					if x.Name.Name == "main" {
 						for _, v := range x.Body.List {
 							if stmt, ok := v.(*ast.ExprStmt); ok {

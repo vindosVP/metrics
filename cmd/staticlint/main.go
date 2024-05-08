@@ -74,10 +74,12 @@ import (
 )
 
 func main() {
-	myChecks := make([]*analysis.Analyzer, 0)
 	passesChecks := passesAnalyzers()
 	saChecks := saAnalyzers()
 	otherChecks := otherAnalyzers()
+
+	myChecks := make([]*analysis.Analyzer, 0, len(passesChecks)+len(saChecks)+len(otherChecks))
+
 	myChecks = append(myChecks, passesChecks...)
 	myChecks = append(myChecks, saChecks...)
 	myChecks = append(myChecks, otherChecks...)
