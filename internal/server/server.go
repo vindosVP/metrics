@@ -67,7 +67,7 @@ func Run(cfg *config.ServerConfig) error {
 	}
 
 	logger.Log.Info(fmt.Sprintf("Running server on %s", cfg.RunAddr))
-	if cfg.EnableHttps {
+	if cfg.EnableHTTPS {
 		err := http.ListenAndServeTLS(cfg.RunAddr, "./https/server.crt", "./https/server.key", mux)
 		if err != nil {
 			return err
