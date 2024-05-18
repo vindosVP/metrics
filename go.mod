@@ -8,7 +8,6 @@ require (
 	github.com/go-chi/chi/v5 v5.0.11
 	github.com/go-resty/resty/v2 v2.11.0
 	github.com/gostaticanalysis/sqlrows v0.0.0-20231116101209-5091a5920ea6
-	github.com/gostaticanalysis/wraperrfmt v0.0.0-20240424134522-a58689aa692e
 	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
 	github.com/jackc/pgx/v5 v5.5.3
 	github.com/jarcoal/httpmock v1.3.1

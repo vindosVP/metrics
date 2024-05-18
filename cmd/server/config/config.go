@@ -18,6 +18,7 @@ type ServerConfig struct {
 	Key             string
 	StoreInterval   time.Duration
 	Restore         bool
+	EnableHttps     bool
 }
 
 type tempConfig struct {
@@ -26,6 +27,7 @@ type tempConfig struct {
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	DatabaseDNS     string `env:"DATABASE_DSN"`
 	Key             string `env:"KEY"`
+	EnableHttps     bool
 	StoreInterval   int
 	Restore         bool
 }
@@ -38,6 +40,7 @@ func NewServerConfig() *ServerConfig {
 	flag.StringVar(&flagConfig.FileStoragePath, "f", "./tmp/metrics-db.json", "file storage path")
 	flag.IntVar(&flagConfig.StoreInterval, "i", 300, "store interval")
 	flag.BoolVar(&flagConfig.Restore, "r", true, "restore from dump file")
+	flag.BoolVar(&flagConfig.EnableHttps, "s", false, "enable https")
 	flag.StringVar(&flagConfig.DatabaseDNS, "d", "", "database dns")
 	flag.StringVar(&flagConfig.Key, "k", "", "hash key")
 	flag.Parse()
@@ -50,6 +53,7 @@ func NewServerConfig() *ServerConfig {
 	tempCfg := &tempConfig{}
 	tempCfg.Restore = flagConfig.Restore
 	tempCfg.StoreInterval = flagConfig.StoreInterval
+	tempCfg.EnableHttps = flagConfig.EnableHttps
 	envRestore, ok := os.LookupEnv("RESTORE")
 	if ok {
 		restore, err := strconv.ParseBool(envRestore)
@@ -65,6 +69,14 @@ func NewServerConfig() *ServerConfig {
 			log.Fatalf("Failed to parse env STORE_INTERVAL value: %v", err)
 		}
 		tempCfg.StoreInterval = storeInterval
+	}
+	envEnableHttps, ok := os.LookupEnv("ENABLE_HTTPS")
+	if ok {
+		enableHttps, err := strconv.ParseBool(envEnableHttps)
+		if err != nil {
+			log.Fatalf("Failed to parse env ENABLE_HTTPS value: %v", err)
+		}
+		tempCfg.EnableHttps = enableHttps
 	}
 
 	tempCfg.RunAddr = envConfig.RunAddr
@@ -97,5 +109,6 @@ func NewServerConfig() *ServerConfig {
 		StoreInterval:   time.Duration(tempCfg.StoreInterval),
 		DatabaseDNS:     tempCfg.DatabaseDNS,
 		Key:             tempCfg.Key,
+		EnableHttps:     tempCfg.EnableHttps,
 	}
 }

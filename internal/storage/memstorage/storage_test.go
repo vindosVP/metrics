@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	"github.com/vindosVP/metrics/internal/repos"
+	"github.com/vindosVP/metrics/internal/storage"
 	"github.com/vindosVP/metrics/internal/storage/memstorage/mocks"
 )
 
@@ -46,10 +48,10 @@ func TestStorage_UpdateCounter(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockCounter := mocks.NewCounter(t)
 			mockGauge := mocks.NewGauge(t)
-			storage := New(mockGauge, mockCounter)
+			s := New(mockGauge, mockCounter)
 			ctx := context.Background()
 			mockCounter.On("Update", mock.Anything, tt.metricName, tt.metricValue).Return(tt.mockValue, tt.mockErr)
-			val, err := storage.UpdateCounter(ctx, tt.metricName, tt.metricValue)
+			val, err := s.UpdateCounter(ctx, tt.metricName, tt.metricValue)
 
 			if tt.wantErr {
 				assert.ErrorIs(t, err, tt.errValue)
@@ -97,10 +99,10 @@ func TestStorage_SetCounter(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockCounter := mocks.NewCounter(t)
 			mockGauge := mocks.NewGauge(t)
-			storage := New(mockGauge, mockCounter)
+			s := New(mockGauge, mockCounter)
 			ctx := context.Background()
 			mockCounter.On("Set", mock.Anything, tt.metricName, tt.metricValue).Return(tt.mockValue, tt.mockErr)
-			val, err := storage.SetCounter(ctx, tt.metricName, tt.metricValue)
+			val, err := s.SetCounter(ctx, tt.metricName, tt.metricValue)
 
 			if tt.wantErr {
 				assert.ErrorIs(t, err, tt.errValue)
@@ -148,10 +150,10 @@ func TestStorage_UpdateGauge(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockCounter := mocks.NewCounter(t)
 			mockGauge := mocks.NewGauge(t)
-			storage := New(mockGauge, mockCounter)
+			s := New(mockGauge, mockCounter)
 			ctx := context.Background()
 			mockGauge.On("Update", mock.Anything, tt.metricName, tt.metricValue).Return(tt.mockValue, tt.mockErr)
-			val, err := storage.UpdateGauge(ctx, tt.metricName, tt.metricValue)
+			val, err := s.UpdateGauge(ctx, tt.metricName, tt.metricValue)
 
 			if tt.wantErr {
 				assert.ErrorIs(t, err, tt.errValue)
@@ -191,16 +193,25 @@ func TestStorage_GetGauge(t *testing.T) {
 			wantValue:  0,
 			wantErr:    true,
 			errValue:   unexpectedError},
+		{
+			name:       "not registered",
+			mockValue:  0.000003,
+			mockErr:    repos.ErrMetricNotRegistered,
+			metricName: "Alloc",
+			wantValue:  0,
+			wantErr:    true,
+			errValue:   storage.ErrMetricNotRegistered,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockCounter := mocks.NewCounter(t)
 			mockGauge := mocks.NewGauge(t)
-			storage := New(mockGauge, mockCounter)
+			s := New(mockGauge, mockCounter)
 			ctx := context.Background()
 			mockGauge.On("Get", mock.Anything, tt.metricName).Return(tt.mockValue, tt.mockErr)
-			val, err := storage.GetGauge(ctx, tt.metricName)
+			val, err := s.GetGauge(ctx, tt.metricName)
 
 			if tt.wantErr {
 				assert.ErrorIs(t, err, tt.errValue)
@@ -240,16 +251,24 @@ func TestStorage_GetCounter(t *testing.T) {
 			wantValue:  0,
 			wantErr:    true,
 			errValue:   unexpectedError},
+		{
+			name:       "not registered",
+			mockValue:  15,
+			mockErr:    repos.ErrMetricNotRegistered,
+			metricName: "PollCount",
+			wantValue:  0,
+			wantErr:    true,
+			errValue:   storage.ErrMetricNotRegistered},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockCounter := mocks.NewCounter(t)
 			mockGauge := mocks.NewGauge(t)
-			storage := New(mockGauge, mockCounter)
+			s := New(mockGauge, mockCounter)
 			ctx := context.Background()
 			mockCounter.On("Get", mock.Anything, tt.metricName).Return(tt.mockValue, tt.mockErr)
-			val, err := storage.GetCounter(ctx, tt.metricName)
+			val, err := s.GetCounter(ctx, tt.metricName)
 
 			if tt.wantErr {
 				assert.ErrorIs(t, err, tt.errValue)
@@ -304,11 +323,11 @@ func TestStorage_GetAllGauge(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockCounter := mocks.NewCounter(t)
 			mockGauge := mocks.NewGauge(t)
-			storage := New(mockGauge, mockCounter)
+			s := New(mockGauge, mockCounter)
 			ctx := context.Background()
 			mockGauge.On("GetAll", mock.Anything).Return(tt.mockMetrics, tt.errValue)
 
-			got, err := storage.GetAllGauge(ctx)
+			got, err := s.GetAllGauge(ctx)
 			if tt.wantErr {
 				assert.ErrorIs(t, err, tt.errValue)
 			} else {
@@ -361,10 +380,10 @@ func TestStorage_GetAllCounter(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockCounter := mocks.NewCounter(t)
 			mockGauge := mocks.NewGauge(t)
-			storage := New(mockGauge, mockCounter)
+			s := New(mockGauge, mockCounter)
 			mockCounter.On("GetAll", mock.Anything).Return(tt.mockMetrics, tt.errValue)
 
-			got, err := storage.GetAllCounter(context.Background())
+			got, err := s.GetAllCounter(context.Background())
 			if tt.wantErr {
 				assert.ErrorIs(t, err, tt.errValue)
 			} else {
