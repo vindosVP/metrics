@@ -21,6 +21,7 @@ import (
 	"github.com/vindosVP/metrics/internal/storage/dbstorage"
 	"github.com/vindosVP/metrics/internal/storage/filestorage"
 	"github.com/vindosVP/metrics/internal/storage/memstorage"
+	"github.com/vindosVP/metrics/pkg/encryption"
 	"github.com/vindosVP/metrics/pkg/logger"
 )
 
@@ -86,10 +87,15 @@ func setupDBServer(cfg *config.ServerConfig, pool *pgxpool.Pool) (*chi.Mux, erro
 	logger.Log.Info("Created successfully")
 	storage := dbstorage.New(pool)
 
+	cryptoKey, err := encryption.PrivateKeyFromFile(cfg.CryptoKeyFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get crypto key: %w", err)
+	}
+
 	r := chi.NewRouter()
 	r.Use(middleware.Sign(cfg.Key))
 	r.Group(func(r chi.Router) { // group with hash validation
-		r.Use(chiMiddleware.Logger, middleware.ValidateHMAC(cfg.Key), middleware.Decompress, chiMiddleware.Compress(5))
+		r.Use(chiMiddleware.Logger, middleware.ValidateHMAC(cfg.Key), middleware.Decode(cryptoKey), middleware.Decompress, chiMiddleware.Compress(5))
 		r.Post("/update/", handlers.UpdateBody(storage))
 		r.Post("/updates/", handlers.UpdateBatch(storage))
 		r.Post("/value/", handlers.GetBody(storage))
@@ -129,10 +135,15 @@ func setupInmemoryServer(cfg *config.ServerConfig) (*chi.Mux, error) {
 		}
 	}
 
+	cryptoKey, err := encryption.PrivateKeyFromFile(cfg.CryptoKeyFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get crypto key: %w", err)
+	}
+
 	r := chi.NewRouter()
 	r.Use(middleware.Sign(cfg.Key))
 	r.Group(func(r chi.Router) { // group with hash validation
-		r.Use(chiMiddleware.Logger, middleware.ValidateHMAC(cfg.Key), middleware.Decompress, chiMiddleware.Compress(5))
+		r.Use(chiMiddleware.Logger, middleware.ValidateHMAC(cfg.Key), middleware.Decode(cryptoKey), middleware.Decompress, chiMiddleware.Compress(5))
 		r.Post("/update/", handlers.UpdateBody(storage))
 		r.Post("/updates/", handlers.UpdateBatch(storage))
 		r.Post("/value/", handlers.GetBody(storage))

@@ -5,6 +5,7 @@
 *.so
 *.dylib
 metrics-db.json
+keys
 
 # Test binary, built with `go test -c`
 *.test
