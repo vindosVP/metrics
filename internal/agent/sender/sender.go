@@ -212,10 +212,14 @@ func send(client *resty.Client, url string, chunk []*models.Metrics, useHash boo
 			return fmt.Errorf("failed to hash metrics: %v", err)
 		}
 	}
-
-	body, err := encryption.Encrypt(cryptoKey, b.Bytes())
-	if err != nil {
-		return fmt.Errorf("failed to encrypt metrics: %v", err)
+	var body []byte
+	if cryptoKey != nil {
+		body, err = encryption.Encrypt(cryptoKey, b.Bytes())
+		if err != nil {
+			return fmt.Errorf("failed to encrypt metrics: %v", err)
+		}
+	} else {
+		body = b.Bytes()
 	}
 
 	resp, err := retry.DoWithData(func() (*resty.Response, error) {

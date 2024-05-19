@@ -56,7 +56,7 @@ func TestSender(t *testing.T) {
 	require.NoError(t, err)
 	gRepo := repos.NewGaugeRepo()
 	storage := memstorage.New(gRepo, cRepo)
-	c := New(cfg, storage)
+	c := New(cfg, storage, nil)
 	c.Done = done
 	c.ReportInterval = 1
 
