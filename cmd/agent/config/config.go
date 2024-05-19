@@ -15,7 +15,6 @@ type AgentConfig struct {
 	RateLimit      int
 	PollInterval   time.Duration
 	ReportInterval time.Duration
-	CryptoKeyFile  string
 }
 
 type tempConfig struct {
@@ -25,7 +24,6 @@ type tempConfig struct {
 	PollInterval   int    `env:"POLL_INTERVAL"`
 	ReportInterval int    `env:"REPORT_INTERVAL"`
 	RateLimit      int    `env:"RATE_LIMIT"`
-	CryptoKeyFile  string `env:"CRYPTO_KEY"`
 }
 
 func NewAgentConfig() *AgentConfig {
@@ -36,7 +34,6 @@ func NewAgentConfig() *AgentConfig {
 	flag.IntVar(&flagConfig.ReportInterval, "r", 10, "report interval")
 	flag.StringVar(&flagConfig.LogLevel, "lg", "info", "log level")
 	flag.StringVar(&flagConfig.Key, "k", "", "secret key")
-	flag.StringVar(&flagConfig.CryptoKeyFile, "crypto-key", "./keys/key.rsa.pub", "crypto key")
 	flag.IntVar(&flagConfig.RateLimit, "l", 3, "rate limit")
 	flag.Parse()
 
@@ -52,7 +49,6 @@ func NewAgentConfig() *AgentConfig {
 	tempCfg.LogLevel = envConfig.LogLevel
 	tempCfg.Key = envConfig.Key
 	tempCfg.RateLimit = envConfig.RateLimit
-	tempCfg.CryptoKeyFile = envConfig.CryptoKeyFile
 	if tempCfg.Key == "" {
 		tempCfg.Key = flagConfig.Key
 	}
@@ -71,9 +67,6 @@ func NewAgentConfig() *AgentConfig {
 	if tempCfg.RateLimit == 0 {
 		tempCfg.RateLimit = flagConfig.RateLimit
 	}
-	if tempCfg.CryptoKeyFile == "" {
-		tempCfg.CryptoKeyFile = flagConfig.CryptoKeyFile
-	}
 
 	config := &AgentConfig{
 		ServerAddr:     tempCfg.ServerAddr,
@@ -82,7 +75,6 @@ func NewAgentConfig() *AgentConfig {
 		LogLevel:       tempCfg.LogLevel,
 		Key:            tempCfg.Key,
 		RateLimit:      tempCfg.RateLimit,
-		CryptoKeyFile:  tempCfg.CryptoKeyFile,
 	}
 
 	return config

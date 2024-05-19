@@ -18,7 +18,6 @@ type ServerConfig struct {
 	Key             string
 	StoreInterval   time.Duration
 	Restore         bool
-	CryptoKeyFile   string
 }
 
 type tempConfig struct {
@@ -27,7 +26,6 @@ type tempConfig struct {
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	DatabaseDNS     string `env:"DATABASE_DSN"`
 	Key             string `env:"KEY"`
-	CryptoKeyFile   string `env:"CRYPTO_KEY"`
 	StoreInterval   int
 	Restore         bool
 }
@@ -42,7 +40,6 @@ func NewServerConfig() *ServerConfig {
 	flag.BoolVar(&flagConfig.Restore, "r", true, "restore from dump file")
 	flag.StringVar(&flagConfig.DatabaseDNS, "d", "", "database dns")
 	flag.StringVar(&flagConfig.Key, "k", "", "hash key")
-	flag.StringVar(&flagConfig.CryptoKeyFile, "crypto-key", "./keys/key.rsa", "crypto key")
 	flag.Parse()
 
 	envConfig := &tempConfig{}
@@ -76,7 +73,6 @@ func NewServerConfig() *ServerConfig {
 	tempCfg.FileStoragePath = envConfig.FileStoragePath
 	tempCfg.DatabaseDNS = envConfig.DatabaseDNS
 	tempCfg.Key = envConfig.Key
-	tempCfg.CryptoKeyFile = envConfig.CryptoKeyFile
 	if tempCfg.Key == "" {
 		tempCfg.Key = flagConfig.Key
 	}
@@ -92,9 +88,6 @@ func NewServerConfig() *ServerConfig {
 	if tempCfg.FileStoragePath == "" {
 		tempCfg.FileStoragePath = flagConfig.FileStoragePath
 	}
-	if tempCfg.CryptoKeyFile == "" {
-		tempCfg.CryptoKeyFile = flagConfig.CryptoKeyFile
-	}
 
 	return &ServerConfig{
 		RunAddr:         tempCfg.RunAddr,
@@ -104,6 +97,5 @@ func NewServerConfig() *ServerConfig {
 		StoreInterval:   time.Duration(tempCfg.StoreInterval),
 		DatabaseDNS:     tempCfg.DatabaseDNS,
 		Key:             tempCfg.Key,
-		CryptoKeyFile:   tempCfg.CryptoKeyFile,
 	}
 }

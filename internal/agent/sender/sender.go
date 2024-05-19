@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"crypto/rsa"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,7 +19,6 @@ import (
 
 	"github.com/vindosVP/metrics/cmd/agent/config"
 	"github.com/vindosVP/metrics/internal/models"
-	"github.com/vindosVP/metrics/pkg/encryption"
 	"github.com/vindosVP/metrics/pkg/logger"
 	"github.com/vindosVP/metrics/pkg/utils"
 )
@@ -53,17 +51,15 @@ type Sender struct {
 	ReportInterval time.Duration
 	RateLimit      int
 	UseHash        bool
-	CryptoKey      *rsa.PublicKey
 }
 
 type job struct {
-	client    *resty.Client
-	url       string
-	key       string
-	metrics   []*models.Metrics
-	id        int
-	useHash   bool
-	cryptoKey *rsa.PublicKey
+	client  *resty.Client
+	url     string
+	key     string
+	metrics []*models.Metrics
+	id      int
+	useHash bool
 }
 
 type result struct {
@@ -78,7 +74,7 @@ var retryDelays = map[uint]time.Duration{
 }
 
 // New creates the Sender
-func New(cfg *config.AgentConfig, s MetricsStorage, cryptoKey *rsa.PublicKey) *Sender {
+func New(cfg *config.AgentConfig, s MetricsStorage) *Sender {
 	return &Sender{
 		ReportInterval: cfg.ReportInterval,
 		ServerAddr:     cfg.ServerAddr,
@@ -87,7 +83,6 @@ func New(cfg *config.AgentConfig, s MetricsStorage, cryptoKey *rsa.PublicKey) *S
 		UseHash:        cfg.Key != "",
 		Key:            cfg.Key,
 		RateLimit:      cfg.RateLimit,
-		CryptoKey:      cryptoKey,
 	}
 }
 
@@ -145,13 +140,12 @@ func (s *Sender) generateJobs(metrics []*models.Metrics) chan job {
 				size = len(metrics)
 			}
 			jobs <- job{
-				id:        id,
-				url:       url,
-				metrics:   metrics[0:size],
-				useHash:   s.UseHash,
-				key:       s.Key,
-				client:    s.Client,
-				cryptoKey: s.CryptoKey,
+				id:      id,
+				url:     url,
+				metrics: metrics[0:size],
+				useHash: s.UseHash,
+				key:     s.Key,
+				client:  s.Client,
 			}
 			metrics = metrics[size:]
 			id++
@@ -184,13 +178,13 @@ func startWorkers(jobs <-chan job, results chan<- result, workers int) {
 
 func worker(jobs <-chan job, results chan<- result, wg *sync.WaitGroup) {
 	for j := range jobs {
-		err := send(j.client, j.url, j.metrics, j.useHash, j.key, j.cryptoKey)
+		err := send(j.client, j.url, j.metrics, j.useHash, j.key)
 		results <- result{err, j.id}
 	}
 	wg.Done()
 }
 
-func send(client *resty.Client, url string, chunk []*models.Metrics, useHash bool, key string, cryptoKey *rsa.PublicKey) error {
+func send(client *resty.Client, url string, chunk []*models.Metrics, useHash bool, key string) error {
 
 	var b bytes.Buffer
 	data, err := json.Marshal(chunk)
@@ -213,15 +207,10 @@ func send(client *resty.Client, url string, chunk []*models.Metrics, useHash boo
 		}
 	}
 
-	body, err := encryption.Encrypt(cryptoKey, b.Bytes())
-	if err != nil {
-		return fmt.Errorf("failed to encrypt metrics: %v", err)
-	}
-
 	resp, err := retry.DoWithData(func() (*resty.Response, error) {
 		req := client.R().
 			SetHeader("Content-Encoding", "gzip").
-			SetBody(body)
+			SetBody(&b)
 		if useHash {
 			req.SetHeader("HashSHA256", hash)
 		}
