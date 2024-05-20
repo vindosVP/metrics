@@ -2,7 +2,10 @@
 package agent
 
 import (
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 
 	"go.uber.org/zap"
 
@@ -29,11 +32,23 @@ func Run(cfg *config.AgentConfig) error {
 	}
 	s := sender.New(cfg, storage, key)
 
+	sig := make(chan os.Signal, 3)
+	signal.Notify(sig, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
+	go func() {
+		<-sig
+		logger.Log.Info("Got stop signal, stopping")
+		c.Stop()
+		s.Stop()
+	}()
+
 	wg := sync.WaitGroup{}
 	wg.Add(2)
-	go c.Run()
-	go s.Run()
+	go c.Run(&wg)
+	go s.Run(&wg)
 	wg.Wait()
+
+	logger.Log.Info("Stopped successfully")
 
 	return nil
 }

@@ -2,6 +2,7 @@ package collector
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -25,23 +26,18 @@ func TestCollector(t *testing.T) {
 		t.Skip("Skipping test because testing.Short is enabled")
 	}
 
-	done := make(chan struct{})
-	collectorShutdown := make(chan struct{})
-
 	cRepo := repos.NewCounterRepo()
 	gRepo := repos.NewGaugeRepo()
 	storage := memstorage.New(gRepo, cRepo)
 	c := New(10*time.Second, storage)
-	c.Done = done
 	c.PollInterval = 1
 
-	go func() {
-		defer close(collectorShutdown)
-		c.Run()
-	}()
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go c.Run(&wg)
 	time.Sleep(2 * time.Second)
-	close(done)
-	<-collectorShutdown
+	c.Stop()
+	wg.Wait()
 
 	expGauges := []string{
 		"Alloc",

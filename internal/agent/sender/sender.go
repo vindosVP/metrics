@@ -46,7 +46,7 @@ const chunkSize = 3
 // Sender consists data to send metrics
 type Sender struct {
 	Storage        MetricsStorage
-	Done           <-chan struct{}
+	Done           chan struct{}
 	Client         *resty.Client
 	ServerAddr     string
 	Key            string
@@ -80,6 +80,7 @@ var retryDelays = map[uint]time.Duration{
 // New creates the Sender
 func New(cfg *config.AgentConfig, s MetricsStorage, cryptoKey *rsa.PublicKey) *Sender {
 	return &Sender{
+		Done:           make(chan struct{}),
 		ReportInterval: cfg.ReportInterval,
 		ServerAddr:     cfg.ServerAddr,
 		Storage:        s,
@@ -91,14 +92,19 @@ func New(cfg *config.AgentConfig, s MetricsStorage, cryptoKey *rsa.PublicKey) *S
 	}
 }
 
+func (s *Sender) Stop() {
+	close(s.Done)
+}
+
 // Run starts the Sender to send metrics
-func (s *Sender) Run() {
+func (s *Sender) Run(wg *sync.WaitGroup) {
 	tick := time.NewTicker(s.ReportInterval * time.Second)
 	defer tick.Stop()
 
 	for {
 		select {
 		case <-s.Done:
+			wg.Done()
 			return
 		case <-tick.C:
 			s.sendMetrics()

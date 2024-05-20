@@ -126,7 +126,7 @@ func parseFlags(config *AgentConfig, full *configFullness) {
 		config.PollInterval = time.Duration(flagCfg.PollInterval)
 		full.PollInterval = true
 	}
-	if !full.ReportInterval {
+	if !full.ReportInterval && flagCfg.ReportInterval != 0 {
 		config.ReportInterval = time.Duration(flagCfg.ReportInterval)
 		full.ReportInterval = true
 	}
@@ -185,6 +185,7 @@ func flags() *tempConfig {
 	flag.StringVar(&flagConfig.LogLevel, "lg", "info", "log level")
 	flag.StringVar(&flagConfig.Key, "k", "", "secret key")
 	flag.StringVar(&flagConfig.CryptoKeyFile, "crypto-key", "./keys/key.rsa.pub", "crypto key")
+	flag.StringVar(&flagConfig.Config, "c", "./config.json", "json config file")
 	flag.IntVar(&flagConfig.RateLimit, "l", 3, "rate limit")
 	flag.Parse()
 	return flagConfig

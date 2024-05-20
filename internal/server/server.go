@@ -3,8 +3,12 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -68,10 +72,35 @@ func Run(cfg *config.ServerConfig) error {
 	}
 
 	logger.Log.Info(fmt.Sprintf("Running server on %s", cfg.RunAddr))
-	err := http.ListenAndServe(cfg.RunAddr, mux)
-	if err != nil {
-		return err
+	return startServer(cfg.RunAddr, mux)
+}
+
+func startServer(addr string, mux *chi.Mux) error {
+
+	svr := http.Server{Addr: addr, Handler: mux}
+
+	sd := make(chan struct{})
+	sig := make(chan os.Signal, 3)
+	signal.Notify(sig, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
+	go func() {
+		<-sig
+		logger.Log.Info("Got stop signal, stopping")
+		err := svr.Shutdown(context.Background())
+		if err != nil {
+			logger.Log.Error("failed to shutdown http server", zap.Error(err))
+		}
+		close(sd)
+	}()
+
+	logger.Log.Info(fmt.Sprintf("Running server on %s", addr))
+	err := svr.ListenAndServe()
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return fmt.Errorf("failed to start http server: %w", err)
 	}
+
+	<-sd
+	logger.Log.Info("Stopped successfully")
 
 	return nil
 }

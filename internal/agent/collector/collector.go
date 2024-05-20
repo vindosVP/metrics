@@ -5,6 +5,7 @@ import (
 	"context"
 	"math/rand"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/shirou/gopsutil/v3/cpu"
@@ -16,7 +17,7 @@ import (
 
 // Collector consists data to collect metrics.
 type Collector struct {
-	Done <-chan struct{}
+	Done chan struct{}
 
 	// Storage - storage to store metrics.
 	Storage MetricsStorage
@@ -42,19 +43,25 @@ type MetricsStorage interface {
 // New creates Collector.
 func New(p time.Duration, s MetricsStorage) *Collector {
 	return &Collector{
+		Done:         make(chan struct{}),
 		PollInterval: p,
 		Storage:      s,
 	}
 }
 
+func (c *Collector) Stop() {
+	close(c.Done)
+}
+
 // Run starts the collector.
-func (c *Collector) Run() {
+func (c *Collector) Run(wg *sync.WaitGroup) {
 	tick := time.NewTicker(c.PollInterval * time.Second)
 	defer tick.Stop()
 
 	for {
 		select {
 		case <-c.Done:
+			wg.Done()
 			return
 		case <-tick.C:
 			c.collectMetrics()

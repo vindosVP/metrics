@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/rand"
 	"net/http"
+	"sync"
 	"testing"
 	"time"
 
@@ -46,9 +47,6 @@ func TestSender(t *testing.T) {
 		t.Skip("Skipping test because testing.Short is enabled")
 	}
 
-	done := make(chan struct{})
-	senderShutdown := make(chan struct{})
-
 	cfg := config.NewAgentConfig()
 	cRepo := repos.NewCounterRepo()
 	ctx := context.Background()
@@ -57,20 +55,18 @@ func TestSender(t *testing.T) {
 	gRepo := repos.NewGaugeRepo()
 	storage := memstorage.New(gRepo, cRepo)
 	c := New(cfg, storage, nil)
-	c.Done = done
 	c.ReportInterval = 1
 
 	responder := httpmock.NewStringResponder(200, "")
 	httpmock.RegisterResponder(http.MethodPost, `=~^(http|https)://.+/update/counter/PollCount/\d+\z`, responder)
 	httpmock.ActivateNonDefault(c.Client.GetClient())
 
-	go func() {
-		defer close(senderShutdown)
-		c.Run()
-	}()
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go c.Run(&wg)
 	time.Sleep(2 * time.Second)
-	close(done)
-	<-senderShutdown
+	c.Stop()
+	wg.Wait()
 
 	pollCount, err := storage.GetCounter(ctx, "PollCount")
 	require.NoError(t, err)
