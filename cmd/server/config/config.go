@@ -1,16 +1,16 @@
 package config
 
 import (
+	"encoding/json"
 	"flag"
 	"log"
 	"os"
 	"strconv"
 	"time"
-
-	"github.com/caarlos0/env/v10"
 )
 
 type ServerConfig struct {
+	Config          string
 	RunAddr         string
 	LogLevel        string
 	FileStoragePath string
@@ -18,20 +18,96 @@ type ServerConfig struct {
 	Key             string
 	StoreInterval   time.Duration
 	Restore         bool
+	CryptoKeyFile   string
 }
 
 type tempConfig struct {
-	RunAddr         string `env:"ADDRESS"`
-	LogLevel        string `env:"LOG_LEVEL"`
-	FileStoragePath string `env:"FILE_STORAGE_PATH"`
-	DatabaseDNS     string `env:"DATABASE_DSN"`
-	Key             string `env:"KEY"`
+	Config          string
+	RunAddr         string
+	LogLevel        string
+	FileStoragePath string
+	DatabaseDNS     string
+	Key             string
 	StoreInterval   int
+	Restore         bool
+	CryptoKeyFile   string
+}
+
+type jsonConfig struct {
+	RunAddr         string `json:"address"`
+	LogLevel        string `json:"log_level"`
+	FileStoragePath string `json:"store_file"`
+	DatabaseDNS     string `json:"database_dsn"`
+	Key             string `json:"key"`
+	StoreInterval   int    `json:"store_interval"`
+	Restore         bool   `json:"restore"`
+	CryptoKeyFile   string `json:"crypto_key"`
+}
+
+type configFullness struct {
+	Config          bool
+	RunAddr         bool
+	LogLevel        bool
+	FileStoragePath bool
+	DatabaseDNS     bool
+	Key             bool
+	CryptoKeyFile   bool
+	StoreInterval   bool
 	Restore         bool
 }
 
 func NewServerConfig() *ServerConfig {
+	config := &ServerConfig{}
+	full := &configFullness{}
+	parseEnvs(config, full)
+	parseFlags(config, full)
+	if full.Config {
+		parseJSON(config, full)
+	}
+	return config
+}
 
+func parseFlags(config *ServerConfig, full *configFullness) {
+	flagCfg := parseFlagConfig()
+	if !full.Config && flagCfg.Config != "" {
+		config.Config = flagCfg.Config
+		full.Config = true
+	}
+	if !full.RunAddr && flagCfg.RunAddr != "" {
+		config.RunAddr = flagCfg.RunAddr
+		full.RunAddr = true
+	}
+	if !full.LogLevel && flagCfg.LogLevel != "" {
+		config.LogLevel = flagCfg.LogLevel
+		full.LogLevel = true
+	}
+	if !full.FileStoragePath && flagCfg.FileStoragePath != "" {
+		config.FileStoragePath = flagCfg.FileStoragePath
+		full.FileStoragePath = true
+	}
+	if !full.DatabaseDNS && flagCfg.DatabaseDNS != "" {
+		config.DatabaseDNS = flagCfg.DatabaseDNS
+		full.DatabaseDNS = true
+	}
+	if !full.Key && flagCfg.Key != "" {
+		config.Key = flagCfg.Key
+		full.Key = true
+	}
+	if !full.StoreInterval {
+		config.StoreInterval = time.Duration(flagCfg.StoreInterval)
+		full.StoreInterval = true
+	}
+	if !full.Restore {
+		config.Restore = flagCfg.Restore
+		full.Restore = true
+	}
+	if !full.CryptoKeyFile && flagCfg.CryptoKeyFile != "" {
+		config.CryptoKeyFile = flagCfg.CryptoKeyFile
+		full.CryptoKeyFile = true
+	}
+}
+
+func parseFlagConfig() *tempConfig {
 	flagConfig := &tempConfig{}
 	flag.StringVar(&flagConfig.RunAddr, "a", "localhost:8080", "address and port to run server")
 	flag.StringVar(&flagConfig.LogLevel, "l", "info", "log level")
@@ -40,62 +116,100 @@ func NewServerConfig() *ServerConfig {
 	flag.BoolVar(&flagConfig.Restore, "r", true, "restore from dump file")
 	flag.StringVar(&flagConfig.DatabaseDNS, "d", "", "database dns")
 	flag.StringVar(&flagConfig.Key, "k", "", "hash key")
+	flag.StringVar(&flagConfig.CryptoKeyFile, "crypto-key", "./keys/key.rsa", "crypto key")
+	flag.StringVar(&flagConfig.Config, "c", "", "json config file")
 	flag.Parse()
+	return flagConfig
+}
 
-	envConfig := &tempConfig{}
-	if err := env.Parse(envConfig); err != nil {
-		log.Fatalf("Failed to parse env config: %v", err)
+func parseEnvs(config *ServerConfig, full *configFullness) {
+	if val, ok := os.LookupEnv("CONFIG"); ok {
+		config.Config = val
+		full.Config = true
 	}
-
-	tempCfg := &tempConfig{}
-	tempCfg.Restore = flagConfig.Restore
-	tempCfg.StoreInterval = flagConfig.StoreInterval
-	envRestore, ok := os.LookupEnv("RESTORE")
-	if ok {
-		restore, err := strconv.ParseBool(envRestore)
-		if err != nil {
-			log.Fatalf("Failed to parse env RESTORE value: %v", err)
-		}
-		tempCfg.Restore = restore
+	if val, ok := os.LookupEnv("ADDRESS"); ok {
+		config.RunAddr = val
+		full.RunAddr = true
 	}
-	envStoreInterval, ok := os.LookupEnv("STORE_INTERVAL")
-	if ok {
-		storeInterval, err := strconv.Atoi(envStoreInterval)
+	if val, ok := os.LookupEnv("LOG_LEVEL"); ok {
+		config.LogLevel = val
+		full.LogLevel = true
+	}
+	if val, ok := os.LookupEnv("FILE_STORAGE_PATH"); ok {
+		config.FileStoragePath = val
+		full.FileStoragePath = true
+	}
+	if val, ok := os.LookupEnv("DATABASE_DSN"); ok {
+		config.DatabaseDNS = val
+		full.DatabaseDNS = true
+	}
+	if val, ok := os.LookupEnv("KEY"); ok {
+		config.Key = val
+		full.Key = true
+	}
+	if val, ok := os.LookupEnv("CRYPTO_KEY"); ok {
+		config.CryptoKeyFile = val
+		full.CryptoKeyFile = true
+	}
+	if val, ok := os.LookupEnv("STORE_INTERVAL"); ok {
+		storeInterval, err := strconv.Atoi(val)
 		if err != nil {
 			log.Fatalf("Failed to parse env STORE_INTERVAL value: %v", err)
 		}
-		tempCfg.StoreInterval = storeInterval
+		config.StoreInterval = time.Duration(storeInterval)
+		full.StoreInterval = true
 	}
+	if val, ok := os.LookupEnv("RESTORE"); ok {
+		restore, err := strconv.ParseBool(val)
+		if err != nil {
+			log.Fatalf("Failed to parse env RESTORE value: %v", err)
+		}
+		config.Restore = restore
+		full.Restore = true
+	}
+}
 
-	tempCfg.RunAddr = envConfig.RunAddr
-	tempCfg.LogLevel = envConfig.LogLevel
-	tempCfg.StoreInterval = envConfig.StoreInterval
-	tempCfg.FileStoragePath = envConfig.FileStoragePath
-	tempCfg.DatabaseDNS = envConfig.DatabaseDNS
-	tempCfg.Key = envConfig.Key
-	if tempCfg.Key == "" {
-		tempCfg.Key = flagConfig.Key
-	}
-	if tempCfg.DatabaseDNS == "" {
-		tempCfg.DatabaseDNS = flagConfig.DatabaseDNS
-	}
-	if tempCfg.RunAddr == "" {
-		tempCfg.RunAddr = flagConfig.RunAddr
-	}
-	if tempCfg.LogLevel == "" {
-		tempCfg.LogLevel = flagConfig.LogLevel
-	}
-	if tempCfg.FileStoragePath == "" {
-		tempCfg.FileStoragePath = flagConfig.FileStoragePath
-	}
+func parseJSON(config *ServerConfig, full *configFullness) {
 
-	return &ServerConfig{
-		RunAddr:         tempCfg.RunAddr,
-		LogLevel:        tempCfg.LogLevel,
-		FileStoragePath: tempCfg.FileStoragePath,
-		Restore:         tempCfg.Restore,
-		StoreInterval:   time.Duration(tempCfg.StoreInterval),
-		DatabaseDNS:     tempCfg.DatabaseDNS,
-		Key:             tempCfg.Key,
+	data, err := os.ReadFile(config.Config)
+	if err != nil {
+		log.Fatalf("Failed to read config file: %v", err)
+	}
+	JSONCfg := &jsonConfig{}
+	err = json.Unmarshal(data, &JSONCfg)
+	if err != nil {
+		log.Fatalf("Failed to unmarshal config file: %v", err)
+	}
+	if !full.RunAddr && JSONCfg.RunAddr != "" {
+		config.RunAddr = JSONCfg.RunAddr
+		full.RunAddr = true
+	}
+	if !full.LogLevel && JSONCfg.LogLevel != "" {
+		config.LogLevel = JSONCfg.LogLevel
+		full.LogLevel = true
+	}
+	if !full.FileStoragePath && JSONCfg.FileStoragePath != "" {
+		config.FileStoragePath = JSONCfg.FileStoragePath
+		full.FileStoragePath = true
+	}
+	if !full.DatabaseDNS && JSONCfg.DatabaseDNS != "" {
+		config.DatabaseDNS = JSONCfg.DatabaseDNS
+		full.DatabaseDNS = true
+	}
+	if !full.Key && JSONCfg.Key != "" {
+		config.Key = JSONCfg.Key
+		full.Key = true
+	}
+	if !full.StoreInterval {
+		config.StoreInterval = time.Duration(JSONCfg.StoreInterval)
+		full.StoreInterval = true
+	}
+	if !full.Restore {
+		config.Restore = JSONCfg.Restore
+		full.Restore = true
+	}
+	if !full.CryptoKeyFile && JSONCfg.CryptoKeyFile != "" {
+		config.CryptoKeyFile = JSONCfg.CryptoKeyFile
+		full.CryptoKeyFile = true
 	}
 }
