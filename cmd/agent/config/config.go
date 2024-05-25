@@ -185,7 +185,7 @@ func flags() *tempConfig {
 	flag.StringVar(&flagConfig.LogLevel, "lg", "info", "log level")
 	flag.StringVar(&flagConfig.Key, "k", "", "secret key")
 	flag.StringVar(&flagConfig.CryptoKeyFile, "crypto-key", "./keys/key.rsa.pub", "crypto key")
-	flag.StringVar(&flagConfig.Config, "c", "./config.json", "json config file")
+	flag.StringVar(&flagConfig.Config, "c", "", "json config file")
 	flag.IntVar(&flagConfig.RateLimit, "l", 3, "rate limit")
 	flag.Parse()
 	return flagConfig

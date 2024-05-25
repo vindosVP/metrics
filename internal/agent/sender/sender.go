@@ -57,13 +57,9 @@ type Sender struct {
 }
 
 type job struct {
-	client    *resty.Client
-	url       string
-	key       string
-	metrics   []*models.Metrics
-	id        int
-	useHash   bool
-	cryptoKey *rsa.PublicKey
+	url     string
+	metrics []*models.Metrics
+	id      int
 }
 
 type result struct {
@@ -126,7 +122,7 @@ func (s *Sender) sendMetrics() {
 	jobs := s.generateJobs(batch)
 	results := make(chan result)
 	go listenResults(results)
-	startWorkers(jobs, results, s.RateLimit)
+	s.startWorkers(jobs, results, s.RateLimit)
 	_, err = s.Storage.SetCounter(ctx, "PollCount", 0)
 	if err != nil {
 		logger.Log.Error(
@@ -151,13 +147,9 @@ func (s *Sender) generateJobs(metrics []*models.Metrics) chan job {
 				size = len(metrics)
 			}
 			jobs <- job{
-				id:        id,
-				url:       url,
-				metrics:   metrics[0:size],
-				useHash:   s.UseHash,
-				key:       s.Key,
-				client:    s.Client,
-				cryptoKey: s.CryptoKey,
+				id:      id,
+				url:     url,
+				metrics: metrics[0:size],
 			}
 			metrics = metrics[size:]
 			id++
@@ -177,26 +169,26 @@ func listenResults(results <-chan result) {
 	}
 }
 
-func startWorkers(jobs <-chan job, results chan<- result, workers int) {
+func (s *Sender) startWorkers(jobs <-chan job, results chan<- result, workers int) {
 	wg := sync.WaitGroup{}
 	logger.Log.Info(fmt.Sprintf("Starting %d workers", workers))
 	for i := 1; i <= workers; i++ {
 		wg.Add(1)
-		go worker(jobs, results, &wg)
+		go s.worker(jobs, results, &wg)
 	}
 	wg.Wait()
 	close(results)
 }
 
-func worker(jobs <-chan job, results chan<- result, wg *sync.WaitGroup) {
+func (s *Sender) worker(jobs <-chan job, results chan<- result, wg *sync.WaitGroup) {
 	for j := range jobs {
-		err := send(j.client, j.url, j.metrics, j.useHash, j.key, j.cryptoKey)
+		err := s.send(j.url, j.metrics)
 		results <- result{err, j.id}
 	}
 	wg.Done()
 }
 
-func send(client *resty.Client, url string, chunk []*models.Metrics, useHash bool, key string, cryptoKey *rsa.PublicKey) error {
+func (s *Sender) send(url string, chunk []*models.Metrics) error {
 
 	var b bytes.Buffer
 	data, err := json.Marshal(chunk)
@@ -212,15 +204,15 @@ func send(client *resty.Client, url string, chunk []*models.Metrics, useHash boo
 	cw.Close()
 
 	hash := ""
-	if useHash {
-		hash, err = utils.Sha256Hash(b.Bytes(), key)
+	if s.UseHash {
+		hash, err = utils.Sha256Hash(b.Bytes(), s.Key)
 		if err != nil {
 			return fmt.Errorf("failed to hash metrics: %v", err)
 		}
 	}
 	var body []byte
-	if cryptoKey != nil {
-		body, err = encryption.Encrypt(cryptoKey, b.Bytes())
+	if s.CryptoKey != nil {
+		body, err = encryption.Encrypt(s.CryptoKey, b.Bytes())
 		if err != nil {
 			return fmt.Errorf("failed to encrypt metrics: %v", err)
 		}
@@ -229,10 +221,10 @@ func send(client *resty.Client, url string, chunk []*models.Metrics, useHash boo
 	}
 
 	resp, err := retry.DoWithData(func() (*resty.Response, error) {
-		req := client.R().
+		req := s.Client.R().
 			SetHeader("Content-Encoding", "gzip").
 			SetBody(body)
-		if useHash {
+		if s.UseHash {
 			req.SetHeader("HashSHA256", hash)
 		}
 		return req.Post(url)
