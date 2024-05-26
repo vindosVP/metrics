@@ -19,6 +19,7 @@ type ServerConfig struct {
 	StoreInterval   time.Duration
 	Restore         bool
 	CryptoKeyFile   string
+	TrustedSubnet   string
 }
 
 type tempConfig struct {
@@ -31,6 +32,7 @@ type tempConfig struct {
 	StoreInterval   int
 	Restore         bool
 	CryptoKeyFile   string
+	TrustedSubnet   string
 }
 
 type jsonConfig struct {
@@ -42,6 +44,7 @@ type jsonConfig struct {
 	StoreInterval   int    `json:"store_interval"`
 	Restore         bool   `json:"restore"`
 	CryptoKeyFile   string `json:"crypto_key"`
+	TrustedSubnet   string `json:"trusted_subnet"`
 }
 
 type configFullness struct {
@@ -54,6 +57,7 @@ type configFullness struct {
 	CryptoKeyFile   bool
 	StoreInterval   bool
 	Restore         bool
+	TrustedSubnet   bool
 }
 
 func NewServerConfig() *ServerConfig {
@@ -101,6 +105,10 @@ func parseFlags(config *ServerConfig, full *configFullness) {
 		config.Restore = flagCfg.Restore
 		full.Restore = true
 	}
+	if !full.TrustedSubnet && flagCfg.TrustedSubnet != "" {
+		config.TrustedSubnet = flagCfg.TrustedSubnet
+		full.TrustedSubnet = true
+	}
 	if !full.CryptoKeyFile && flagCfg.CryptoKeyFile != "" {
 		config.CryptoKeyFile = flagCfg.CryptoKeyFile
 		full.CryptoKeyFile = true
@@ -118,6 +126,7 @@ func parseFlagConfig() *tempConfig {
 	flag.StringVar(&flagConfig.Key, "k", "", "hash key")
 	flag.StringVar(&flagConfig.CryptoKeyFile, "crypto-key", "", "crypto key")
 	flag.StringVar(&flagConfig.Config, "c", "", "json config file")
+	flag.StringVar(&flagConfig.TrustedSubnet, "t", "", "trusted subnet")
 	flag.Parse()
 	return flagConfig
 }
@@ -150,6 +159,10 @@ func parseEnvs(config *ServerConfig, full *configFullness) {
 	if val, ok := os.LookupEnv("CRYPTO_KEY"); ok {
 		config.CryptoKeyFile = val
 		full.CryptoKeyFile = true
+	}
+	if val, ok := os.LookupEnv("TRUSTED_SUBNET"); ok {
+		config.TrustedSubnet = val
+		full.TrustedSubnet = true
 	}
 	if val, ok := os.LookupEnv("STORE_INTERVAL"); ok {
 		storeInterval, err := strconv.Atoi(val)
@@ -211,5 +224,9 @@ func parseJSON(config *ServerConfig, full *configFullness) {
 	if !full.CryptoKeyFile && JSONCfg.CryptoKeyFile != "" {
 		config.CryptoKeyFile = JSONCfg.CryptoKeyFile
 		full.CryptoKeyFile = true
+	}
+	if !full.TrustedSubnet {
+		config.TrustedSubnet = JSONCfg.TrustedSubnet
+		full.TrustedSubnet = true
 	}
 }

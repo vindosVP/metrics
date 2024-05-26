@@ -3,6 +3,8 @@ package agent
 
 import (
 	"crypto/rsa"
+	"log"
+	"net"
 	"os"
 	"os/signal"
 	"sync"
@@ -35,7 +37,7 @@ func Run(cfg *config.AgentConfig) error {
 		}
 		key = k
 	}
-	s := sender.New(cfg, storage, key)
+	s := sender.New(cfg, storage, key, GetLocalIP())
 
 	sig := make(chan os.Signal, 3)
 	signal.Notify(sig, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
@@ -56,4 +58,16 @@ func Run(cfg *config.AgentConfig) error {
 	logger.Log.Info("Stopped successfully")
 
 	return nil
+}
+
+func GetLocalIP() net.IP {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
+
+	localAddress := conn.LocalAddr().(*net.UDPAddr)
+
+	return localAddress.IP
 }

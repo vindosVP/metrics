@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"sync"
 	"syscall"
@@ -54,6 +55,7 @@ type Sender struct {
 	RateLimit      int
 	UseHash        bool
 	CryptoKey      *rsa.PublicKey
+	IP             net.IP
 }
 
 type job struct {
@@ -74,7 +76,7 @@ var retryDelays = map[uint]time.Duration{
 }
 
 // New creates the Sender
-func New(cfg *config.AgentConfig, s MetricsStorage, cryptoKey *rsa.PublicKey) *Sender {
+func New(cfg *config.AgentConfig, s MetricsStorage, cryptoKey *rsa.PublicKey, IP net.IP) *Sender {
 	return &Sender{
 		Done:           make(chan struct{}),
 		ReportInterval: cfg.ReportInterval,
@@ -85,6 +87,7 @@ func New(cfg *config.AgentConfig, s MetricsStorage, cryptoKey *rsa.PublicKey) *S
 		Key:            cfg.Key,
 		RateLimit:      cfg.RateLimit,
 		CryptoKey:      cryptoKey,
+		IP:             IP,
 	}
 }
 
@@ -182,13 +185,13 @@ func (s *Sender) startWorkers(jobs <-chan job, results chan<- result, workers in
 
 func (s *Sender) worker(jobs <-chan job, results chan<- result, wg *sync.WaitGroup) {
 	for j := range jobs {
-		err := s.send(j.url, j.metrics)
+		err := s.send(j.url, j.metrics, s.IP)
 		results <- result{err, j.id}
 	}
 	wg.Done()
 }
 
-func (s *Sender) send(url string, chunk []*models.Metrics) error {
+func (s *Sender) send(url string, chunk []*models.Metrics, ip net.IP) error {
 
 	var b bytes.Buffer
 	data, err := json.Marshal(chunk)
@@ -223,6 +226,7 @@ func (s *Sender) send(url string, chunk []*models.Metrics) error {
 	resp, err := retry.DoWithData(func() (*resty.Response, error) {
 		req := s.Client.R().
 			SetHeader("Content-Encoding", "gzip").
+			SetHeader("X-Real-IP", ip.String()).
 			SetBody(body)
 		if s.UseHash {
 			req.SetHeader("HashSHA256", hash)

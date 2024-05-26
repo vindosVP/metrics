@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -124,20 +125,26 @@ func setupDBServer(cfg *config.ServerConfig, pool *pgxpool.Pool) (*chi.Mux, erro
 		}
 	}
 
+	var subnet *net.IPNet = nil
+	if cfg.TrustedSubnet != "" {
+		_, trustedNet, err := net.ParseCIDR(cfg.TrustedSubnet)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse trusted subnet: %w", err)
+		}
+		subnet = trustedNet
+		logger.Log.Info(fmt.Sprintf("Trusted subnet: %s", subnet.String()))
+	}
+
 	r := chi.NewRouter()
 	r.Use(middleware.Sign(cfg.Key))
 	r.Group(func(r chi.Router) { // group with hash validation
-		if cryptoKey != nil {
-			r.Use(chiMiddleware.Logger, middleware.ValidateHMAC(cfg.Key), middleware.Decode(cryptoKey), middleware.Decompress, chiMiddleware.Compress(5))
-		} else {
-			r.Use(chiMiddleware.Logger, middleware.ValidateHMAC(cfg.Key), middleware.Decompress, chiMiddleware.Compress(5))
-		}
+		setupMiddlewares(r, cfg.Key, cryptoKey, true, subnet)
 		r.Post("/update/", handlers.UpdateBody(storage))
 		r.Post("/updates/", handlers.UpdateBatch(storage))
 		r.Post("/value/", handlers.GetBody(storage))
 	})
 	r.Group(func(r chi.Router) {
-		r.Use(chiMiddleware.Logger, middleware.Decompress, chiMiddleware.Compress(5))
+		setupMiddlewares(r, "", nil, false, subnet)
 		r.Post("/update/{type}/{name}/{value}", handlers.Update(storage))
 		r.Get("/value/{type}/{name}", handlers.Get(storage))
 		r.Get("/", handlers.List(storage))
@@ -180,20 +187,26 @@ func setupInmemoryServer(cfg *config.ServerConfig) (*chi.Mux, error) {
 		cryptoKey = ck
 	}
 
+	var subnet *net.IPNet = nil
+	if cfg.TrustedSubnet != "" {
+		_, trustedNet, err := net.ParseCIDR(cfg.TrustedSubnet)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse trusted subnet: %w", err)
+		}
+		subnet = trustedNet
+		logger.Log.Info(fmt.Sprintf("Trusted subnet: %s", subnet.String()))
+	}
+
 	r := chi.NewRouter()
 	r.Use(middleware.Sign(cfg.Key))
 	r.Group(func(r chi.Router) { // group with hash validation
-		if cryptoKey != nil {
-			r.Use(chiMiddleware.Logger, middleware.ValidateHMAC(cfg.Key), middleware.Decode(cryptoKey), middleware.Decompress, chiMiddleware.Compress(5))
-		} else {
-			r.Use(chiMiddleware.Logger, middleware.ValidateHMAC(cfg.Key), middleware.Decompress, chiMiddleware.Compress(5))
-		}
+		setupMiddlewares(r, cfg.Key, cryptoKey, true, subnet)
 		r.Post("/update/", handlers.UpdateBody(storage))
 		r.Post("/updates/", handlers.UpdateBatch(storage))
 		r.Post("/value/", handlers.GetBody(storage))
 	})
 	r.Group(func(r chi.Router) {
-		r.Use(chiMiddleware.Logger, middleware.Decompress, chiMiddleware.Compress(5))
+		setupMiddlewares(r, "", nil, false, subnet)
 		r.Post("/update/{type}/{name}/{value}", handlers.Update(storage))
 		r.Get("/value/{type}/{name}", handlers.Get(storage))
 		r.Get("/", handlers.List(storage))
@@ -201,6 +214,21 @@ func setupInmemoryServer(cfg *config.ServerConfig) (*chi.Mux, error) {
 	r.Handle("/assets/*", http.StripPrefix("/assets", http.FileServer(http.Dir("assets"))))
 
 	return r, nil
+}
+
+func setupMiddlewares(r chi.Router, key string, cryptoKey *rsa.PrivateKey, validateHash bool, tNet *net.IPNet) {
+	r.Use(chiMiddleware.Logger)
+	if tNet != nil {
+		r.Use(middleware.CheckSubnet(*tNet))
+	}
+	if validateHash {
+		r.Use(middleware.ValidateHMAC(key))
+	}
+	if cryptoKey != nil {
+		r.Use(middleware.Decode(cryptoKey))
+	}
+	r.Use(middleware.Decompress)
+	r.Use(chiMiddleware.Compress(5))
 }
 
 func createTables(pool *pgxpool.Pool) error {
