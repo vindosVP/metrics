@@ -20,12 +20,12 @@ func CheckSubnet(subnet net.IPNet) func(next http.Handler) http.Handler {
 
 func (c *Checker) CheckHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		realIp := r.Header.Get("X-Real-IP")
-		if realIp == "" {
+		realIP := r.Header.Get("X-Real-IP")
+		if realIP == "" {
 			http.Error(w, "No real ip provided", http.StatusForbidden)
 			return
 		}
-		ip := net.ParseIP(realIp)
+		ip := net.ParseIP(realIP)
 		if ip == nil {
 			http.Error(w, "Bad X-Real-IP header", http.StatusForbidden)
 			return

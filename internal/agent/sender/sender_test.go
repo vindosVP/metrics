@@ -3,6 +3,7 @@ package sender
 import (
 	"context"
 	"math/rand"
+	"net"
 	"net/http"
 	"sync"
 	"testing"
@@ -54,7 +55,7 @@ func TestSender(t *testing.T) {
 	require.NoError(t, err)
 	gRepo := repos.NewGaugeRepo()
 	storage := memstorage.New(gRepo, cRepo)
-	c := New(cfg, storage, nil)
+	c := New(cfg, storage, nil, net.IP{})
 	c.ReportInterval = 1
 
 	responder := httpmock.NewStringResponder(200, "")
