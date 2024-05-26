@@ -116,7 +116,7 @@ func parseFlagConfig() *tempConfig {
 	flag.BoolVar(&flagConfig.Restore, "r", true, "restore from dump file")
 	flag.StringVar(&flagConfig.DatabaseDNS, "d", "", "database dns")
 	flag.StringVar(&flagConfig.Key, "k", "", "hash key")
-	flag.StringVar(&flagConfig.CryptoKeyFile, "crypto-key", "./keys/key.rsa", "crypto key")
+	flag.StringVar(&flagConfig.CryptoKeyFile, "crypto-key", "", "crypto key")
 	flag.StringVar(&flagConfig.Config, "c", "", "json config file")
 	flag.Parse()
 	return flagConfig

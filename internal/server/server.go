@@ -3,6 +3,7 @@ package server
 
 import (
 	"context"
+	"crypto/rsa"
 	"errors"
 	"fmt"
 	"net/http"
@@ -71,7 +72,6 @@ func Run(cfg *config.ServerConfig) error {
 		mux = memmux
 	}
 
-	logger.Log.Info(fmt.Sprintf("Running server on %s", cfg.RunAddr))
 	return startServer(cfg.RunAddr, mux)
 }
 
@@ -116,15 +116,22 @@ func setupDBServer(cfg *config.ServerConfig, pool *pgxpool.Pool) (*chi.Mux, erro
 	logger.Log.Info("Created successfully")
 	storage := dbstorage.New(pool)
 
-	cryptoKey, err := encryption.PrivateKeyFromFile(cfg.CryptoKeyFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get crypto key: %w", err)
+	var cryptoKey *rsa.PrivateKey = nil
+	if cfg.CryptoKeyFile != "" {
+		cryptoKey, err = encryption.PrivateKeyFromFile(cfg.CryptoKeyFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get crypto key: %w", err)
+		}
 	}
 
 	r := chi.NewRouter()
 	r.Use(middleware.Sign(cfg.Key))
 	r.Group(func(r chi.Router) { // group with hash validation
-		r.Use(chiMiddleware.Logger, middleware.ValidateHMAC(cfg.Key), middleware.Decode(cryptoKey), middleware.Decompress, chiMiddleware.Compress(5))
+		if cryptoKey != nil {
+			r.Use(chiMiddleware.Logger, middleware.ValidateHMAC(cfg.Key), middleware.Decode(cryptoKey), middleware.Decompress, chiMiddleware.Compress(5))
+		} else {
+			r.Use(chiMiddleware.Logger, middleware.ValidateHMAC(cfg.Key), middleware.Decompress, chiMiddleware.Compress(5))
+		}
 		r.Post("/update/", handlers.UpdateBody(storage))
 		r.Post("/updates/", handlers.UpdateBatch(storage))
 		r.Post("/value/", handlers.GetBody(storage))
@@ -164,15 +171,23 @@ func setupInmemoryServer(cfg *config.ServerConfig) (*chi.Mux, error) {
 		}
 	}
 
-	cryptoKey, err := encryption.PrivateKeyFromFile(cfg.CryptoKeyFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get crypto key: %w", err)
+	var cryptoKey *rsa.PrivateKey = nil
+	if cfg.CryptoKeyFile != "" {
+		ck, err := encryption.PrivateKeyFromFile(cfg.CryptoKeyFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get crypto key: %w", err)
+		}
+		cryptoKey = ck
 	}
 
 	r := chi.NewRouter()
 	r.Use(middleware.Sign(cfg.Key))
 	r.Group(func(r chi.Router) { // group with hash validation
-		r.Use(chiMiddleware.Logger, middleware.ValidateHMAC(cfg.Key), middleware.Decode(cryptoKey), middleware.Decompress, chiMiddleware.Compress(5))
+		if cryptoKey != nil {
+			r.Use(chiMiddleware.Logger, middleware.ValidateHMAC(cfg.Key), middleware.Decode(cryptoKey), middleware.Decompress, chiMiddleware.Compress(5))
+		} else {
+			r.Use(chiMiddleware.Logger, middleware.ValidateHMAC(cfg.Key), middleware.Decompress, chiMiddleware.Compress(5))
+		}
 		r.Post("/update/", handlers.UpdateBody(storage))
 		r.Post("/updates/", handlers.UpdateBatch(storage))
 		r.Post("/value/", handlers.GetBody(storage))

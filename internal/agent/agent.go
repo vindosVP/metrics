@@ -2,6 +2,7 @@
 package agent
 
 import (
+	"crypto/rsa"
 	"os"
 	"os/signal"
 	"sync"
@@ -26,9 +27,13 @@ func Run(cfg *config.AgentConfig) error {
 	storage := memstorage.New(gRepo, cRepo)
 
 	c := collector.New(cfg.PollInterval, storage)
-	key, err := encryption.PublicKeyFromFile(cfg.CryptoKeyFile)
-	if err != nil {
-		logger.Log.Fatal("failed to get encryption key", zap.Error(err))
+	var key *rsa.PublicKey = nil
+	if cfg.CryptoKeyFile != "" {
+		k, err := encryption.PublicKeyFromFile(cfg.CryptoKeyFile)
+		if err != nil {
+			logger.Log.Fatal("failed to get encryption key", zap.Error(err))
+		}
+		key = k
 	}
 	s := sender.New(cfg, storage, key)
 
