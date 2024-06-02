@@ -17,13 +17,16 @@ import (
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 
 	"github.com/vindosVP/metrics/cmd/server/config"
 	"github.com/vindosVP/metrics/internal/handlers"
 	"github.com/vindosVP/metrics/internal/middleware"
 	"github.com/vindosVP/metrics/internal/models"
+	pb "github.com/vindosVP/metrics/internal/proto"
 	"github.com/vindosVP/metrics/internal/repos"
 	"github.com/vindosVP/metrics/internal/server/loader"
+	"github.com/vindosVP/metrics/internal/service"
 	"github.com/vindosVP/metrics/internal/storage/dbstorage"
 	"github.com/vindosVP/metrics/internal/storage/filestorage"
 	"github.com/vindosVP/metrics/internal/storage/memstorage"
@@ -49,6 +52,7 @@ type MetricsStorage interface {
 func Run(cfg *config.ServerConfig) error {
 	useDatabase := cfg.DatabaseDNS != ""
 	var mux *chi.Mux
+	var grpcServer *grpc.Server
 	if useDatabase {
 		logger.Log.Info("Starting database server")
 		logger.Log.Info("Connecting to database")
@@ -60,23 +64,25 @@ func Run(cfg *config.ServerConfig) error {
 		}
 		logger.Log.Info("Connected successfully")
 		defer pool.Close()
-		dbmux, err := setupDBServer(cfg, pool)
+		dbmux, a, err := setupDBServer(cfg, pool)
 		if err != nil {
 			return err
 		}
 		mux = dbmux
+		grpcServer = a
 	} else {
-		memmux, err := setupInmemoryServer(cfg)
+		memmux, a, err := setupInmemoryServer(cfg)
 		if err != nil {
 			return err
 		}
 		mux = memmux
+		grpcServer = a
 	}
 
-	return startServer(cfg.RunAddr, mux)
+	return startServer(cfg.RunAddr, grpcServer, mux)
 }
 
-func startServer(addr string, mux *chi.Mux) error {
+func startServer(addr string, a *grpc.Server, mux *chi.Mux) error {
 
 	svr := http.Server{Addr: addr, Handler: mux}
 
@@ -106,13 +112,13 @@ func startServer(addr string, mux *chi.Mux) error {
 	return nil
 }
 
-func setupDBServer(cfg *config.ServerConfig, pool *pgxpool.Pool) (*chi.Mux, error) {
+func setupDBServer(cfg *config.ServerConfig, pool *pgxpool.Pool) (*chi.Mux, *grpc.Server, error) {
 
 	logger.Log.Info("Creating tables")
 	err := createTables(pool)
 	if err != nil {
 		logger.Log.Error("Failed to create tables")
-		return nil, err
+		return nil, nil, err
 	}
 	logger.Log.Info("Created successfully")
 	storage := dbstorage.New(pool)
@@ -121,7 +127,7 @@ func setupDBServer(cfg *config.ServerConfig, pool *pgxpool.Pool) (*chi.Mux, erro
 	if cfg.CryptoKeyFile != "" {
 		cryptoKey, err = encryption.PrivateKeyFromFile(cfg.CryptoKeyFile)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get crypto key: %w", err)
+			return nil, nil, fmt.Errorf("failed to get crypto key: %w", err)
 		}
 	}
 
@@ -129,7 +135,7 @@ func setupDBServer(cfg *config.ServerConfig, pool *pgxpool.Pool) (*chi.Mux, erro
 	if cfg.TrustedSubnet != "" {
 		_, trustedNet, err := net.ParseCIDR(cfg.TrustedSubnet)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse trusted subnet: %w", err)
+			return nil, nil, fmt.Errorf("failed to parse trusted subnet: %w", err)
 		}
 		subnet = trustedNet
 		logger.Log.Info(fmt.Sprintf("Trusted subnet: %s", subnet.String()))
@@ -152,10 +158,13 @@ func setupDBServer(cfg *config.ServerConfig, pool *pgxpool.Pool) (*chi.Mux, erro
 	})
 	r.Handle("/assets/*", http.StripPrefix("/assets", http.FileServer(http.Dir("assets"))))
 
-	return r, nil
+	a := grpc.NewServer()
+	pb.RegisterMetricsServer(a, service.NewMetricsServer(storage))
+
+	return r, a, nil
 }
 
-func setupInmemoryServer(cfg *config.ServerConfig) (*chi.Mux, error) {
+func setupInmemoryServer(cfg *config.ServerConfig) (*chi.Mux, *grpc.Server, error) {
 	logger.Log.Info("Starting inmemory server")
 
 	var storage MetricsStorage
@@ -182,7 +191,7 @@ func setupInmemoryServer(cfg *config.ServerConfig) (*chi.Mux, error) {
 	if cfg.CryptoKeyFile != "" {
 		ck, err := encryption.PrivateKeyFromFile(cfg.CryptoKeyFile)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get crypto key: %w", err)
+			return nil, nil, fmt.Errorf("failed to get crypto key: %w", err)
 		}
 		cryptoKey = ck
 	}
@@ -191,7 +200,7 @@ func setupInmemoryServer(cfg *config.ServerConfig) (*chi.Mux, error) {
 	if cfg.TrustedSubnet != "" {
 		_, trustedNet, err := net.ParseCIDR(cfg.TrustedSubnet)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse trusted subnet: %w", err)
+			return nil, nil, fmt.Errorf("failed to parse trusted subnet: %w", err)
 		}
 		subnet = trustedNet
 		logger.Log.Info(fmt.Sprintf("Trusted subnet: %s", subnet.String()))
@@ -213,7 +222,10 @@ func setupInmemoryServer(cfg *config.ServerConfig) (*chi.Mux, error) {
 	})
 	r.Handle("/assets/*", http.StripPrefix("/assets", http.FileServer(http.Dir("assets"))))
 
-	return r, nil
+	a := grpc.NewServer()
+	pb.RegisterMetricsServer(a, service.NewMetricsServer(storage))
+
+	return r, a, nil
 }
 
 func setupMiddlewares(r chi.Router, key string, cryptoKey *rsa.PrivateKey, validateHash bool, tNet *net.IPNet) {
