@@ -3,34 +3,24 @@ package server
 
 import (
 	"context"
-	"crypto/rsa"
-	"errors"
 	"fmt"
-	"net"
-	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"go.uber.org/zap"
-	"google.golang.org/grpc"
 
 	"github.com/vindosVP/metrics/cmd/server/config"
-	"github.com/vindosVP/metrics/internal/handlers"
-	"github.com/vindosVP/metrics/internal/middleware"
 	"github.com/vindosVP/metrics/internal/models"
-	pb "github.com/vindosVP/metrics/internal/proto"
 	"github.com/vindosVP/metrics/internal/repos"
+	"github.com/vindosVP/metrics/internal/server/grpcServer"
+	"github.com/vindosVP/metrics/internal/server/httpServer"
 	"github.com/vindosVP/metrics/internal/server/loader"
-	"github.com/vindosVP/metrics/internal/service"
 	"github.com/vindosVP/metrics/internal/storage/dbstorage"
 	"github.com/vindosVP/metrics/internal/storage/filestorage"
 	"github.com/vindosVP/metrics/internal/storage/memstorage"
-	"github.com/vindosVP/metrics/pkg/encryption"
 	"github.com/vindosVP/metrics/pkg/logger"
 )
 
@@ -48,199 +38,126 @@ type MetricsStorage interface {
 	InsertBatch(ctx context.Context, batch []*models.Metrics) error
 }
 
-// Run starts the http server
-func Run(cfg *config.ServerConfig) error {
-	useDatabase := cfg.DatabaseDNS != ""
-	var mux *chi.Mux
-	var grpcServer *grpc.Server
-	if useDatabase {
-		logger.Log.Info("Starting database server")
-		logger.Log.Info("Connecting to database")
-		ctx := context.Background()
-		pool, err := pgxpool.New(ctx, cfg.DatabaseDNS)
-		if err != nil {
-			logger.Log.Error("Failed to connect to database")
-			return err
-		}
-		logger.Log.Info("Connected successfully")
-		defer pool.Close()
-		dbmux, a, err := setupDBServer(cfg, pool)
-		if err != nil {
-			return err
-		}
-		mux = dbmux
-		grpcServer = a
-	} else {
-		memmux, a, err := setupInmemoryServer(cfg)
-		if err != nil {
-			return err
-		}
-		mux = memmux
-		grpcServer = a
-	}
-
-	return startServer(cfg.RunAddr, grpcServer, mux)
+type pServer interface {
+	Run(wg *sync.WaitGroup)
+	Stop(wg *sync.WaitGroup)
 }
 
-func startServer(addr string, a *grpc.Server, mux *chi.Mux) error {
+type Server struct {
+	http pServer
+	grpc pServer
+}
 
-	svr := http.Server{Addr: addr, Handler: mux}
-
-	sd := make(chan struct{})
+func (s *Server) Run() {
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	wg.Add(1)
 	sig := make(chan os.Signal, 3)
 	signal.Notify(sig, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 
 	go func() {
 		<-sig
 		logger.Log.Info("Got stop signal, stopping")
-		err := svr.Shutdown(context.Background())
-		if err != nil {
-			logger.Log.Error("failed to shutdown http server", zap.Error(err))
-		}
-		close(sd)
+		go s.http.Stop(wg)
+		go s.grpc.Stop(wg)
 	}()
 
-	logger.Log.Info(fmt.Sprintf("Running server on %s", addr))
-	err := svr.ListenAndServe()
-	if err != nil && !errors.Is(err, http.ErrServerClosed) {
-		return fmt.Errorf("failed to start http server: %w", err)
-	}
+	go s.http.Run(wg)
+	go s.grpc.Run(wg)
 
-	<-sd
-	logger.Log.Info("Stopped successfully")
-
-	return nil
+	wg.Wait()
+	logger.Log.Info("Server stopped")
 }
 
-func setupDBServer(cfg *config.ServerConfig, pool *pgxpool.Pool) (*chi.Mux, *grpc.Server, error) {
+func withHttpServer(hs pServer) func(*Server) {
+	return func(s *Server) {
+		s.http = hs
+	}
+}
 
-	logger.Log.Info("Creating tables")
-	err := createTables(pool)
+func withGRPCServer(hs pServer) func(*Server) {
+	return func(s *Server) {
+		s.grpc = hs
+	}
+}
+
+func newServer(opts ...func(*Server)) *Server {
+	s := &Server{}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
+}
+
+func New(cfg *config.ServerConfig) (*Server, error) {
+	s, err := storage(cfg)
 	if err != nil {
-		logger.Log.Error("Failed to create tables")
-		return nil, nil, err
+		return nil, fmt.Errorf("failed to create server: %w", err)
 	}
-	logger.Log.Info("Created successfully")
-	storage := dbstorage.New(pool)
-
-	var cryptoKey *rsa.PrivateKey = nil
-	if cfg.CryptoKeyFile != "" {
-		cryptoKey, err = encryption.PrivateKeyFromFile(cfg.CryptoKeyFile)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to get crypto key: %w", err)
-		}
+	hs, err := httpServer.New(s, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create server: %w", err)
 	}
-
-	var subnet *net.IPNet = nil
-	if cfg.TrustedSubnet != "" {
-		_, trustedNet, err := net.ParseCIDR(cfg.TrustedSubnet)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to parse trusted subnet: %w", err)
-		}
-		subnet = trustedNet
-		logger.Log.Info(fmt.Sprintf("Trusted subnet: %s", subnet.String()))
+	gs, err := grpcServer.New(s, cfg.RPCAddr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create server: %w", err)
 	}
-
-	r := chi.NewRouter()
-	r.Use(middleware.Sign(cfg.Key))
-	r.Group(func(r chi.Router) { // group with hash validation
-		setupMiddlewares(r, cfg.Key, cryptoKey, true, subnet)
-		r.Post("/update/", handlers.UpdateBody(storage))
-		r.Post("/updates/", handlers.UpdateBatch(storage))
-		r.Post("/value/", handlers.GetBody(storage))
-	})
-	r.Group(func(r chi.Router) {
-		setupMiddlewares(r, "", nil, false, subnet)
-		r.Post("/update/{type}/{name}/{value}", handlers.Update(storage))
-		r.Get("/value/{type}/{name}", handlers.Get(storage))
-		r.Get("/", handlers.List(storage))
-		r.Get("/ping", handlers.Ping(pool))
-	})
-	r.Handle("/assets/*", http.StripPrefix("/assets", http.FileServer(http.Dir("assets"))))
-
-	a := grpc.NewServer()
-	pb.RegisterMetricsServer(a, service.NewMetricsServer(storage))
-
-	return r, a, nil
+	return newServer(withHttpServer(hs), withGRPCServer(gs)), nil
 }
 
-func setupInmemoryServer(cfg *config.ServerConfig) (*chi.Mux, *grpc.Server, error) {
-	logger.Log.Info("Starting inmemory server")
+func storage(cfg *config.ServerConfig) (MetricsStorage, error) {
+	if cfg.DatabaseDNS != "" {
+		s, err := dbStorage(cfg.DatabaseDNS)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create database storage: %w", err)
+		}
+		return s, nil
+	} else {
+		s, err := memStorage(cfg.StoreInterval, cfg.Restore, cfg.FileStoragePath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create inmemory storage: %w", err)
+		}
+		return s, nil
+	}
+}
 
-	var storage MetricsStorage
+func dbStorage(dsn string) (MetricsStorage, error) {
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, dsn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to databse: %w", err)
+	}
+	logger.Log.Info("Creating tables")
+	err = createTables(pool)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create tables: %w", err)
+	}
+	logger.Log.Info("Tables created successfully")
+	return dbstorage.New(pool), nil
+}
+
+func memStorage(si time.Duration, restore bool, dump string) (MetricsStorage, error) {
+
+	var s MetricsStorage
+
 	gRepo := repos.NewGaugeRepo()
 	cRepo := repos.NewCounterRepo()
-	if cfg.StoreInterval != time.Duration(0) {
+	if si != time.Duration(0) {
 		logger.Log.Info("Starting saver")
-		storage = memstorage.New(gRepo, cRepo)
-		svr := filestorage.NewSaver(cfg.FileStoragePath, cfg.StoreInterval, storage)
+		s = memstorage.New(gRepo, cRepo)
+		svr := filestorage.NewSaver(dump, si, s)
 		go svr.Run()
-		defer svr.Stop()
 	} else {
-		storage = filestorage.NewFileStorage(gRepo, cRepo, cfg.FileStoragePath)
+		s = filestorage.NewFileStorage(gRepo, cRepo, dump)
 	}
-	if cfg.Restore {
-		dumpLoader := loader.New(cfg.FileStoragePath, storage)
+	if restore {
+		dumpLoader := loader.New(dump, s)
 		err := dumpLoader.LoadMetrics()
 		if err != nil {
-			logger.Log.Error("Failed to load dump", zap.Error(err))
+			return nil, fmt.Errorf("failed to load dump: %w", err)
 		}
 	}
-
-	var cryptoKey *rsa.PrivateKey = nil
-	if cfg.CryptoKeyFile != "" {
-		ck, err := encryption.PrivateKeyFromFile(cfg.CryptoKeyFile)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to get crypto key: %w", err)
-		}
-		cryptoKey = ck
-	}
-
-	var subnet *net.IPNet = nil
-	if cfg.TrustedSubnet != "" {
-		_, trustedNet, err := net.ParseCIDR(cfg.TrustedSubnet)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to parse trusted subnet: %w", err)
-		}
-		subnet = trustedNet
-		logger.Log.Info(fmt.Sprintf("Trusted subnet: %s", subnet.String()))
-	}
-
-	r := chi.NewRouter()
-	r.Use(middleware.Sign(cfg.Key))
-	r.Group(func(r chi.Router) { // group with hash validation
-		setupMiddlewares(r, cfg.Key, cryptoKey, true, subnet)
-		r.Post("/update/", handlers.UpdateBody(storage))
-		r.Post("/updates/", handlers.UpdateBatch(storage))
-		r.Post("/value/", handlers.GetBody(storage))
-	})
-	r.Group(func(r chi.Router) {
-		setupMiddlewares(r, "", nil, false, subnet)
-		r.Post("/update/{type}/{name}/{value}", handlers.Update(storage))
-		r.Get("/value/{type}/{name}", handlers.Get(storage))
-		r.Get("/", handlers.List(storage))
-	})
-	r.Handle("/assets/*", http.StripPrefix("/assets", http.FileServer(http.Dir("assets"))))
-
-	a := grpc.NewServer()
-	pb.RegisterMetricsServer(a, service.NewMetricsServer(storage))
-
-	return r, a, nil
-}
-
-func setupMiddlewares(r chi.Router, key string, cryptoKey *rsa.PrivateKey, validateHash bool, tNet *net.IPNet) {
-	r.Use(chiMiddleware.Logger)
-	if tNet != nil {
-		r.Use(middleware.CheckSubnet(*tNet))
-	}
-	if validateHash {
-		r.Use(middleware.ValidateHMAC(key))
-	}
-	if cryptoKey != nil {
-		r.Use(middleware.Decode(cryptoKey))
-	}
-	r.Use(middleware.Decompress)
-	r.Use(chiMiddleware.Compress(5))
+	return s, nil
 }
 
 func createTables(pool *pgxpool.Pool) error {

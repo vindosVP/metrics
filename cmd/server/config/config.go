@@ -11,6 +11,7 @@ import (
 
 type ServerConfig struct {
 	Config          string
+	RPCAddr         string
 	RunAddr         string
 	LogLevel        string
 	FileStoragePath string
@@ -25,6 +26,7 @@ type ServerConfig struct {
 type tempConfig struct {
 	Config          string
 	RunAddr         string
+	RPCAddr         string
 	LogLevel        string
 	FileStoragePath string
 	DatabaseDNS     string
@@ -37,6 +39,7 @@ type tempConfig struct {
 
 type jsonConfig struct {
 	RunAddr         string `json:"address"`
+	RPCAddr         string `json:"rpc_address"`
 	LogLevel        string `json:"log_level"`
 	FileStoragePath string `json:"store_file"`
 	DatabaseDNS     string `json:"database_dsn"`
@@ -58,6 +61,7 @@ type configFullness struct {
 	StoreInterval   bool
 	Restore         bool
 	TrustedSubnet   bool
+	RPCAddr         bool
 }
 
 func NewServerConfig() *ServerConfig {
@@ -80,6 +84,10 @@ func parseFlags(config *ServerConfig, full *configFullness) {
 	if !full.RunAddr && flagCfg.RunAddr != "" {
 		config.RunAddr = flagCfg.RunAddr
 		full.RunAddr = true
+	}
+	if !full.RPCAddr && flagCfg.RPCAddr != "" {
+		config.RPCAddr = flagCfg.RPCAddr
+		full.RPCAddr = true
 	}
 	if !full.LogLevel && flagCfg.LogLevel != "" {
 		config.LogLevel = flagCfg.LogLevel
@@ -117,7 +125,8 @@ func parseFlags(config *ServerConfig, full *configFullness) {
 
 func parseFlagConfig() *tempConfig {
 	flagConfig := &tempConfig{}
-	flag.StringVar(&flagConfig.RunAddr, "a", "localhost:8080", "address and port to run server")
+	flag.StringVar(&flagConfig.RunAddr, "a", "localhost:8080", "address and port to run http server")
+	flag.StringVar(&flagConfig.RPCAddr, "ra", "localhost:9090", "address and port to run rpc server")
 	flag.StringVar(&flagConfig.LogLevel, "l", "info", "log level")
 	flag.StringVar(&flagConfig.FileStoragePath, "f", "./tmp/metrics-db.json", "file storage path")
 	flag.IntVar(&flagConfig.StoreInterval, "i", 300, "store interval")
@@ -139,6 +148,10 @@ func parseEnvs(config *ServerConfig, full *configFullness) {
 	if val, ok := os.LookupEnv("ADDRESS"); ok {
 		config.RunAddr = val
 		full.RunAddr = true
+	}
+	if val, ok := os.LookupEnv("RPC_ADDRESS"); ok {
+		config.RPCAddr = val
+		full.RPCAddr = true
 	}
 	if val, ok := os.LookupEnv("LOG_LEVEL"); ok {
 		config.LogLevel = val
@@ -200,6 +213,10 @@ func parseJSON(config *ServerConfig, full *configFullness) {
 	if !full.LogLevel && JSONCfg.LogLevel != "" {
 		config.LogLevel = JSONCfg.LogLevel
 		full.LogLevel = true
+	}
+	if !full.RPCAddr && JSONCfg.RPCAddr != "" {
+		config.RPCAddr = JSONCfg.RPCAddr
+		full.RPCAddr = true
 	}
 	if !full.FileStoragePath && JSONCfg.FileStoragePath != "" {
 		config.FileStoragePath = JSONCfg.FileStoragePath

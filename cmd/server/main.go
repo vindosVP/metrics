@@ -23,10 +23,12 @@ func main() {
 	if err != nil {
 		log.Fatalf(fmt.Sprintf("Failed to initialize logger: %v", err))
 	}
-	err = server.Run(cfg)
+	logger.Log.Info("Starting server")
+	s, err := server.New(cfg)
 	if err != nil {
 		logger.Log.Fatal(fmt.Sprintf("Failed to start server: %v", err))
 	}
+	s.Run()
 }
 
 func printBuildInfo() {

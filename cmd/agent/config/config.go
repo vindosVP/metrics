@@ -11,6 +11,7 @@ import (
 
 type AgentConfig struct {
 	Config         string
+	UseRPC         bool
 	ServerAddr     string
 	LogLevel       string
 	Key            string
@@ -22,6 +23,7 @@ type AgentConfig struct {
 
 type tempConfig struct {
 	Config         string `json:"-"`
+	UseRPC         bool   `json:"use_rpc"`
 	ServerAddr     string `json:"address"`
 	LogLevel       string `json:"log_level"`
 	Key            string `json:"key"`
@@ -33,6 +35,7 @@ type tempConfig struct {
 
 type configFullness struct {
 	Config         bool
+	UseRPC         bool
 	ServerAddr     bool
 	LogLevel       bool
 	Key            bool
@@ -61,6 +64,14 @@ func parseEnvs(config *AgentConfig, full *configFullness) {
 	if val, ok := os.LookupEnv("ADDRESS"); ok {
 		config.ServerAddr = val
 		full.ServerAddr = true
+	}
+	if val, ok := os.LookupEnv("USE_RPC"); ok {
+		l, err := strconv.ParseBool(val)
+		if err != nil {
+			log.Fatalf("Failed to parse env USE_RPC value: %v", err)
+		}
+		config.UseRPC = l
+		full.UseRPC = true
 	}
 	if val, ok := os.LookupEnv("LOG_LEVEL"); ok {
 		config.LogLevel = val
@@ -110,6 +121,10 @@ func parseFlags(config *AgentConfig, full *configFullness) {
 		config.ServerAddr = flagCfg.ServerAddr
 		full.ServerAddr = true
 	}
+	if !full.UseRPC {
+		config.UseRPC = flagCfg.UseRPC
+		full.UseRPC = true
+	}
 	if !full.LogLevel && flagCfg.LogLevel != "" {
 		config.LogLevel = flagCfg.LogLevel
 		full.LogLevel = true
@@ -151,6 +166,10 @@ func parseJSON(config *AgentConfig, full *configFullness) {
 		config.ServerAddr = JSONCfg.ServerAddr
 		full.ServerAddr = true
 	}
+	if !full.UseRPC {
+		config.UseRPC = JSONCfg.UseRPC
+		full.UseRPC = true
+	}
 	if !full.LogLevel && JSONCfg.LogLevel != "" {
 		config.LogLevel = JSONCfg.LogLevel
 		full.LogLevel = true
@@ -180,6 +199,7 @@ func parseJSON(config *AgentConfig, full *configFullness) {
 func flags() *tempConfig {
 	flagConfig := &tempConfig{}
 	flag.StringVar(&flagConfig.ServerAddr, "a", "localhost:8080", "metrics server address")
+	flag.BoolVar(&flagConfig.UseRPC, "rpc", true, "use rpc")
 	flag.IntVar(&flagConfig.PollInterval, "p", 2, "metrics poll interval")
 	flag.IntVar(&flagConfig.ReportInterval, "r", 10, "report interval")
 	flag.StringVar(&flagConfig.LogLevel, "lg", "info", "log level")
