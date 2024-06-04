@@ -15,8 +15,8 @@ import (
 	"github.com/vindosVP/metrics/cmd/server/config"
 	"github.com/vindosVP/metrics/internal/models"
 	"github.com/vindosVP/metrics/internal/repos"
-	"github.com/vindosVP/metrics/internal/server/grpcServer"
-	"github.com/vindosVP/metrics/internal/server/httpServer"
+	"github.com/vindosVP/metrics/internal/server/grpcserver"
+	"github.com/vindosVP/metrics/internal/server/httpserver"
 	"github.com/vindosVP/metrics/internal/server/loader"
 	"github.com/vindosVP/metrics/internal/storage/dbstorage"
 	"github.com/vindosVP/metrics/internal/storage/filestorage"
@@ -69,7 +69,7 @@ func (s *Server) Run() {
 	logger.Log.Info("Server stopped")
 }
 
-func withHttpServer(hs pServer) func(*Server) {
+func withHTTPServer(hs pServer) func(*Server) {
 	return func(s *Server) {
 		s.http = hs
 	}
@@ -94,15 +94,15 @@ func New(cfg *config.ServerConfig) (*Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create server: %w", err)
 	}
-	hs, err := httpServer.New(s, cfg)
+	hs, err := httpserver.New(s, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create server: %w", err)
 	}
-	gs, err := grpcServer.New(s, cfg.RPCAddr)
+	gs, err := grpcserver.New(s, cfg.RPCAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create server: %w", err)
 	}
-	return newServer(withHttpServer(hs), withGRPCServer(gs)), nil
+	return newServer(withHTTPServer(hs), withGRPCServer(gs)), nil
 }
 
 func storage(cfg *config.ServerConfig) (MetricsStorage, error) {

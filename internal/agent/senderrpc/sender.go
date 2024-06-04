@@ -1,4 +1,4 @@
-package senderRPC
+package senderrpc
 
 import (
 	"context"

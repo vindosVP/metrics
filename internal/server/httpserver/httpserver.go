@@ -1,4 +1,4 @@
-package httpServer
+package httpserver
 
 import (
 	"context"
@@ -52,7 +52,7 @@ func (h *HTTPServer) Stop(wg *sync.WaitGroup) {
 	wg.Done()
 }
 
-func newHttpServer(s *http.Server) *HTTPServer {
+func newHTTPServer(s *http.Server) *HTTPServer {
 	return &HTTPServer{s: s}
 }
 
@@ -175,5 +175,5 @@ func New(st MetricsStorage, cfg *config.ServerConfig) (*HTTPServer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to configure http server: %w", err)
 	}
-	return newHttpServer(newServer(configuration(c)...)), nil
+	return newHTTPServer(newServer(configuration(c)...)), nil
 }

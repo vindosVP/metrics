@@ -15,7 +15,7 @@ import (
 	"github.com/vindosVP/metrics/cmd/agent/config"
 	"github.com/vindosVP/metrics/internal/agent/collector"
 	"github.com/vindosVP/metrics/internal/agent/sender"
-	"github.com/vindosVP/metrics/internal/agent/senderRPC"
+	"github.com/vindosVP/metrics/internal/agent/senderrpc"
 	"github.com/vindosVP/metrics/internal/repos"
 	"github.com/vindosVP/metrics/internal/storage/memstorage"
 	"github.com/vindosVP/metrics/pkg/encryption"
@@ -49,7 +49,7 @@ func Run(cfg *config.AgentConfig) error {
 		s = sender.New(cfg, storage, key, GetLocalIP())
 	} else {
 		logger.Log.Info("Sending metrics using GRPC")
-		s = senderRPC.New(cfg, storage)
+		s = senderrpc.New(cfg, storage)
 	}
 
 	sig := make(chan os.Signal, 3)
