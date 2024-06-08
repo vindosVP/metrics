@@ -244,7 +244,7 @@ func retryOpts() []retry.Option {
 			delay := retryDelays[n]
 			return delay
 		}),
-		retry.OnRetry(func(n uint, err error) {
+		retry.OnRetry(func(n uint, _ error) {
 			logger.Log.Info(fmt.Sprintf("Failed to connect to server, retrying in %s", retryDelays[n]))
 		}),
 		retry.Attempts(4),

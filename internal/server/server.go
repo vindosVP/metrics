@@ -112,13 +112,12 @@ func storage(cfg *config.ServerConfig) (MetricsStorage, error) {
 			return nil, fmt.Errorf("failed to create database storage: %w", err)
 		}
 		return s, nil
-	} else {
-		s, err := memStorage(cfg.StoreInterval, cfg.Restore, cfg.FileStoragePath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create inmemory storage: %w", err)
-		}
-		return s, nil
 	}
+	s, err := memStorage(cfg.StoreInterval, cfg.Restore, cfg.FileStoragePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create inmemory storage: %w", err)
+	}
+	return s, nil
 }
 
 func dbStorage(dsn string) (MetricsStorage, error) {

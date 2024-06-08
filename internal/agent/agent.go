@@ -37,7 +37,7 @@ func Run(cfg *config.AgentConfig) error {
 	c := collector.New(cfg.PollInterval, storage)
 	var s Sender
 	if !cfg.UseRPC {
-		var key *rsa.PublicKey = nil
+		var key *rsa.PublicKey
 		if cfg.CryptoKeyFile != "" {
 			k, err := encryption.PublicKeyFromFile(cfg.CryptoKeyFile)
 			if err != nil {
