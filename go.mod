@@ -1,14 +1,14 @@
 module github.com/vindosVP/metrics
 
-go 1.20
+go 1.21
+
+toolchain go1.21.8
 
 require (
 	github.com/avast/retry-go/v4 v4.5.1
-	github.com/caarlos0/env/v10 v10.0.0
 	github.com/go-chi/chi/v5 v5.0.11
 	github.com/go-resty/resty/v2 v2.11.0
 	github.com/gostaticanalysis/sqlrows v0.0.0-20231116101209-5091a5920ea6
-	github.com/gostaticanalysis/wraperrfmt v0.0.0-20240424134522-a58689aa692e
 	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
 	github.com/jackc/pgx/v5 v5.5.3
 	github.com/jarcoal/httpmock v1.3.1
@@ -17,6 +17,8 @@ require (
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/zap v1.26.0
 	golang.org/x/tools v0.20.0
+	google.golang.org/grpc v1.64.0
+	google.golang.org/protobuf v1.34.1
 	honnef.co/go/tools v0.4.7
 )
 
@@ -28,6 +30,7 @@ require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
+	github.com/kr/pretty v0.3.1 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
@@ -44,6 +47,7 @@ require (
 	golang.org/x/net v0.24.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/sys v0.19.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/text v0.15.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240513163218-0867130af1f8 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

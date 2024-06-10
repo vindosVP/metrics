@@ -11,6 +11,7 @@ import (
 
 type ServerConfig struct {
 	Config          string
+	RPCAddr         string
 	RunAddr         string
 	LogLevel        string
 	FileStoragePath string
@@ -19,11 +20,13 @@ type ServerConfig struct {
 	StoreInterval   time.Duration
 	Restore         bool
 	CryptoKeyFile   string
+	TrustedSubnet   string
 }
 
 type tempConfig struct {
 	Config          string
 	RunAddr         string
+	RPCAddr         string
 	LogLevel        string
 	FileStoragePath string
 	DatabaseDNS     string
@@ -31,10 +34,12 @@ type tempConfig struct {
 	StoreInterval   int
 	Restore         bool
 	CryptoKeyFile   string
+	TrustedSubnet   string
 }
 
 type jsonConfig struct {
 	RunAddr         string `json:"address"`
+	RPCAddr         string `json:"rpc_address"`
 	LogLevel        string `json:"log_level"`
 	FileStoragePath string `json:"store_file"`
 	DatabaseDNS     string `json:"database_dsn"`
@@ -42,6 +47,7 @@ type jsonConfig struct {
 	StoreInterval   int    `json:"store_interval"`
 	Restore         bool   `json:"restore"`
 	CryptoKeyFile   string `json:"crypto_key"`
+	TrustedSubnet   string `json:"trusted_subnet"`
 }
 
 type configFullness struct {
@@ -54,6 +60,8 @@ type configFullness struct {
 	CryptoKeyFile   bool
 	StoreInterval   bool
 	Restore         bool
+	TrustedSubnet   bool
+	RPCAddr         bool
 }
 
 func NewServerConfig() *ServerConfig {
@@ -76,6 +84,10 @@ func parseFlags(config *ServerConfig, full *configFullness) {
 	if !full.RunAddr && flagCfg.RunAddr != "" {
 		config.RunAddr = flagCfg.RunAddr
 		full.RunAddr = true
+	}
+	if !full.RPCAddr && flagCfg.RPCAddr != "" {
+		config.RPCAddr = flagCfg.RPCAddr
+		full.RPCAddr = true
 	}
 	if !full.LogLevel && flagCfg.LogLevel != "" {
 		config.LogLevel = flagCfg.LogLevel
@@ -101,6 +113,10 @@ func parseFlags(config *ServerConfig, full *configFullness) {
 		config.Restore = flagCfg.Restore
 		full.Restore = true
 	}
+	if !full.TrustedSubnet && flagCfg.TrustedSubnet != "" {
+		config.TrustedSubnet = flagCfg.TrustedSubnet
+		full.TrustedSubnet = true
+	}
 	if !full.CryptoKeyFile && flagCfg.CryptoKeyFile != "" {
 		config.CryptoKeyFile = flagCfg.CryptoKeyFile
 		full.CryptoKeyFile = true
@@ -109,7 +125,8 @@ func parseFlags(config *ServerConfig, full *configFullness) {
 
 func parseFlagConfig() *tempConfig {
 	flagConfig := &tempConfig{}
-	flag.StringVar(&flagConfig.RunAddr, "a", "localhost:8080", "address and port to run server")
+	flag.StringVar(&flagConfig.RunAddr, "a", "localhost:8080", "address and port to run http server")
+	flag.StringVar(&flagConfig.RPCAddr, "ra", "localhost:9090", "address and port to run rpc server")
 	flag.StringVar(&flagConfig.LogLevel, "l", "info", "log level")
 	flag.StringVar(&flagConfig.FileStoragePath, "f", "./tmp/metrics-db.json", "file storage path")
 	flag.IntVar(&flagConfig.StoreInterval, "i", 300, "store interval")
@@ -118,6 +135,7 @@ func parseFlagConfig() *tempConfig {
 	flag.StringVar(&flagConfig.Key, "k", "", "hash key")
 	flag.StringVar(&flagConfig.CryptoKeyFile, "crypto-key", "", "crypto key")
 	flag.StringVar(&flagConfig.Config, "c", "", "json config file")
+	flag.StringVar(&flagConfig.TrustedSubnet, "t", "", "trusted subnet")
 	flag.Parse()
 	return flagConfig
 }
@@ -130,6 +148,10 @@ func parseEnvs(config *ServerConfig, full *configFullness) {
 	if val, ok := os.LookupEnv("ADDRESS"); ok {
 		config.RunAddr = val
 		full.RunAddr = true
+	}
+	if val, ok := os.LookupEnv("RPC_ADDRESS"); ok {
+		config.RPCAddr = val
+		full.RPCAddr = true
 	}
 	if val, ok := os.LookupEnv("LOG_LEVEL"); ok {
 		config.LogLevel = val
@@ -150,6 +172,10 @@ func parseEnvs(config *ServerConfig, full *configFullness) {
 	if val, ok := os.LookupEnv("CRYPTO_KEY"); ok {
 		config.CryptoKeyFile = val
 		full.CryptoKeyFile = true
+	}
+	if val, ok := os.LookupEnv("TRUSTED_SUBNET"); ok {
+		config.TrustedSubnet = val
+		full.TrustedSubnet = true
 	}
 	if val, ok := os.LookupEnv("STORE_INTERVAL"); ok {
 		storeInterval, err := strconv.Atoi(val)
@@ -188,6 +214,10 @@ func parseJSON(config *ServerConfig, full *configFullness) {
 		config.LogLevel = JSONCfg.LogLevel
 		full.LogLevel = true
 	}
+	if !full.RPCAddr && JSONCfg.RPCAddr != "" {
+		config.RPCAddr = JSONCfg.RPCAddr
+		full.RPCAddr = true
+	}
 	if !full.FileStoragePath && JSONCfg.FileStoragePath != "" {
 		config.FileStoragePath = JSONCfg.FileStoragePath
 		full.FileStoragePath = true
@@ -211,5 +241,9 @@ func parseJSON(config *ServerConfig, full *configFullness) {
 	if !full.CryptoKeyFile && JSONCfg.CryptoKeyFile != "" {
 		config.CryptoKeyFile = JSONCfg.CryptoKeyFile
 		full.CryptoKeyFile = true
+	}
+	if !full.TrustedSubnet {
+		config.TrustedSubnet = JSONCfg.TrustedSubnet
+		full.TrustedSubnet = true
 	}
 }

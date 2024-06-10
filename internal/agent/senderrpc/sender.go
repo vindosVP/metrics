@@ -1,29 +1,22 @@
-// Package sender sends collected metrics to the server every n seconds
-package sender
+package senderrpc
 
 import (
-	"bytes"
-	"compress/gzip"
 	"context"
-	"crypto/rsa"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"net"
-	"net/http"
 	"sync"
 	"syscall"
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/go-resty/resty/v2"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/vindosVP/metrics/cmd/agent/config"
 	"github.com/vindosVP/metrics/internal/models"
-	"github.com/vindosVP/metrics/pkg/encryption"
+	pb "github.com/vindosVP/metrics/internal/proto"
 	"github.com/vindosVP/metrics/pkg/logger"
-	"github.com/vindosVP/metrics/pkg/utils"
 )
 
 // MetricsStorage consists of methods to write and get data from storage.
@@ -48,18 +41,12 @@ const chunkSize = 3
 type Sender struct {
 	Storage        MetricsStorage
 	Done           chan struct{}
-	Client         *resty.Client
-	ServerAddr     string
-	Key            string
+	Client         pb.MetricsClient
 	ReportInterval time.Duration
 	RateLimit      int
-	UseHash        bool
-	CryptoKey      *rsa.PublicKey
-	IP             net.IP
 }
 
 type job struct {
-	url     string
 	metrics []*models.Metrics
 	id      int
 }
@@ -76,18 +63,17 @@ var retryDelays = map[uint]time.Duration{
 }
 
 // New creates the Sender
-func New(cfg *config.AgentConfig, s MetricsStorage, cryptoKey *rsa.PublicKey, IP net.IP) *Sender {
+func New(cfg *config.AgentConfig, s MetricsStorage) *Sender {
+	conn, err := grpc.NewClient(cfg.ServerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		logger.Log.Fatal("Failed to connect GRPC")
+	}
 	return &Sender{
 		Done:           make(chan struct{}),
 		ReportInterval: cfg.ReportInterval,
-		ServerAddr:     cfg.ServerAddr,
 		Storage:        s,
-		Client:         resty.New(),
-		UseHash:        cfg.Key != "",
-		Key:            cfg.Key,
+		Client:         pb.NewMetricsClient(conn),
 		RateLimit:      cfg.RateLimit,
-		CryptoKey:      cryptoKey,
-		IP:             IP,
 	}
 }
 
@@ -140,7 +126,6 @@ func (s *Sender) generateJobs(metrics []*models.Metrics) chan job {
 	jobs := make(chan job)
 	go func() {
 		size := chunkSize
-		url := fmt.Sprintf("http://%s/updates/", s.ServerAddr)
 		id := 1
 		for {
 			if len(metrics) == 0 {
@@ -151,7 +136,6 @@ func (s *Sender) generateJobs(metrics []*models.Metrics) chan job {
 			}
 			jobs <- job{
 				id:      id,
-				url:     url,
 				metrics: metrics[0:size],
 			}
 			metrics = metrics[size:]
@@ -185,61 +169,40 @@ func (s *Sender) startWorkers(jobs <-chan job, results chan<- result, workers in
 
 func (s *Sender) worker(jobs <-chan job, results chan<- result, wg *sync.WaitGroup) {
 	for j := range jobs {
-		err := s.send(j.url, j.metrics, s.IP)
+		err := s.send(j.metrics)
 		results <- result{err, j.id}
 	}
 	wg.Done()
 }
 
-func (s *Sender) send(url string, chunk []*models.Metrics, ip net.IP) error {
-
-	var b bytes.Buffer
-	data, err := json.Marshal(chunk)
-	if err != nil {
-		return fmt.Errorf("failed to marshal metrics: %v", err)
-	}
-
-	cw := gzip.NewWriter(&b)
-	_, err = cw.Write(data)
-	if err != nil {
-		return fmt.Errorf("failed to gzip metrics: %v", err)
-	}
-	cw.Close()
-
-	hash := ""
-	if s.UseHash {
-		hash, err = utils.Sha256Hash(b.Bytes(), s.Key)
-		if err != nil {
-			return fmt.Errorf("failed to hash metrics: %v", err)
+func (s *Sender) send(chunk []*models.Metrics) error {
+	ctx := context.Background()
+	_, err := retry.DoWithData(func() (*pb.UpdateBatchResponse, error) {
+		metrics := make([]*pb.Metric, 0, len(chunk))
+		for _, v := range chunk {
+			if v.MType == models.Gauge {
+				val := v.Value
+				metrics = append(metrics, &pb.Metric{
+					Type:  pb.MType_GAUGE,
+					Id:    v.ID,
+					Value: *val,
+				})
+			} else {
+				val := v.Delta
+				metrics = append(metrics, &pb.Metric{
+					Type:  pb.MType_COUNTER,
+					Id:    v.ID,
+					Delta: *val,
+				})
+			}
 		}
-	}
-	var body []byte
-	if s.CryptoKey != nil {
-		body, err = encryption.Encrypt(s.CryptoKey, b.Bytes())
-		if err != nil {
-			return fmt.Errorf("failed to encrypt metrics: %v", err)
-		}
-	} else {
-		body = b.Bytes()
-	}
-
-	resp, err := retry.DoWithData(func() (*resty.Response, error) {
-		req := s.Client.R().
-			SetHeader("Content-Encoding", "gzip").
-			SetHeader("X-Real-IP", ip.String()).
-			SetBody(body)
-		if s.UseHash {
-			req.SetHeader("HashSHA256", hash)
-		}
-		return req.Post(url)
+		return s.Client.UpdateBatch(ctx, &pb.UpdateBatchRequest{Metrics: metrics})
 	}, retryOpts()...)
 
 	if err != nil {
 		return fmt.Errorf("failed to send metrics: %v", err)
 	}
-	if resp.StatusCode() != http.StatusOK {
-		return fmt.Errorf("failed to send metrics: %v", resp.Status())
-	}
+
 	return nil
 }
 
@@ -281,7 +244,7 @@ func retryOpts() []retry.Option {
 			delay := retryDelays[n]
 			return delay
 		}),
-		retry.OnRetry(func(n uint, err error) {
+		retry.OnRetry(func(n uint, _ error) {
 			logger.Log.Info(fmt.Sprintf("Failed to connect to server, retrying in %s", retryDelays[n]))
 		}),
 		retry.Attempts(4),

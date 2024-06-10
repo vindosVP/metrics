@@ -1,0 +1,45 @@
+syntax = "proto3";
+package v1;
+option go_package = "github.com/vindosVP/metrics/v1";
+
+message GetRequest {
+  MType type = 1;
+  string id = 2;
+}
+
+message GetResponse {
+  Metric metric = 2;
+}
+
+message UpdateRequest {
+  Metric metric = 1;
+}
+
+message  UpdateResponse {
+  Metric metric = 2;
+}
+
+message UpdateBatchRequest {
+  repeated Metric metrics = 1;
+}
+
+message UpdateBatchResponse{
+}
+
+message Metric {
+  MType type = 1;
+  string id = 2;
+  int64 delta = 3;
+  double value = 4;
+}
+
+enum MType {
+  COUNTER = 0;
+  GAUGE = 1;
+}
+
+service Metrics {
+  rpc Get(GetRequest) returns (GetResponse);
+  rpc Update(UpdateRequest) returns (UpdateResponse);
+  rpc UpdateBatch(UpdateBatchRequest) returns (UpdateBatchResponse);
+}
